@@ -10,6 +10,7 @@ import copy
 import time
 import pickle as pkl
 from LSTMAE import LSTM_AE
+import tqdm
 
 def train_model(model, train_tensors, val_tensors, epochs, lr, device):
     optimizer = optim.Adam(model.parameters(),lr=lr)
@@ -23,15 +24,17 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         model.train()
         train_losses = []
 
-        for train_tensor in train_tensors:
-            #start = time.time()
-            optimizer.zero_grad()
+        with tqdm.tqdm(train_tensors, unit="example") as tepoch:
+            for train_tensor in tepoch:
+                tepoch.set_description(f"Epoch {epoch+1}")
+                #start = time.time()
+                optimizer.zero_grad()
 
-            reconstruction = model(train_tensor.to(device))
-            loss = mse(reconstruction,train_tensor)
-            loss.backward()
-            optimizer.step()
-            train_losses.append(loss.item())
+                reconstruction = model(train_tensor.to(device))
+                loss = mse(reconstruction,train_tensor)
+                loss.backward()
+                optimizer.step()
+                train_losses.append(loss.item())
             #print(time.time() - start, end=" ")
 
         val_losses = []
