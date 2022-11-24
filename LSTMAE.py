@@ -81,6 +81,6 @@ class LSTM_AE(nn.Module):
         assert x.shape[2] == self.n_features
 
         latent_vector = self.encode(x)
-        stacked_LV = latent_vector.repeat(1,n_examples,1).to(device)
+        stacked_LV = latent_vector.repeat(1,n_examples,1).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
         return reconstructed_x
