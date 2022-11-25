@@ -11,6 +11,7 @@ import time
 import pickle as pkl
 from LSTMAE import LSTM_AE
 import tqdm
+from EarlyStopper import EarlyStopping
 
 def train_model(model, train_tensors, val_tensors, epochs, lr, device):
     optimizer = optim.Adam(model.parameters(),lr=lr)
@@ -19,6 +20,8 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
 
     best_model = copy.deepcopy(model.state_dict())
     best_loss = 100000.0
+
+    early_stopper = EarlyStopping(3, 1e-3, 1e-3)
 
     for epoch in range(epochs):
         model.train()
@@ -58,6 +61,11 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
             best_model = copy.deepcopy(model.state_dict())
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
+
+        if early_stopper.stopping_condition(val_loss):
+            print("Early stopping condition met, stopping training")
+            break
+
     model.load_state_dict(best_model)
     return model.eval(), loss_over_time
 
