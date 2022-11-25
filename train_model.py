@@ -79,7 +79,7 @@ with open("val_tensors_analog_feats.pkl", "rb") as pklfile:
 device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
 lstm_ae = LSTM_AE(8, 8, 32, 0.2, device).to(device)
-lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors,epochs = 150 , lr = 1e-3, device = device)
+lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors,epochs = 50 , lr = 1e-3, device = device)
 
 with open("lstm_ae_analog_8_32_150_1e-3.pkl", "wb") as modelpkl:
     pkl.dump(lstm_ae,modelpkl)
