@@ -130,3 +130,6 @@ dmypy.json
 
 # data files
 .csv
+.idea/metro-anomaly.iml
+.idea/modules.xml
+.idea/vcs.xml
