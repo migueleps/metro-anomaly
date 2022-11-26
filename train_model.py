@@ -21,7 +21,7 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
     best_model = copy.deepcopy(model.state_dict())
     best_loss = 100000.0
 
-    early_stopper = EarlyStopping(3, 1e-3, 1e-3)
+    early_stopper = EarlyStopping(3, 1e-3, 1e-4)
 
     for epoch in range(epochs):
         model.train()
