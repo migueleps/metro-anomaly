@@ -1,3 +1,4 @@
+
 import numpy as np
 import torch as th
 from torch import nn, optim
@@ -19,6 +20,7 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
 <<<<<<< Updated upstream
     early_stopper = EarlyStopping(3, 1e-3, 1e-4)
 =======
+    #early_stopper = EarlyStopping(3, 1e-3, 1e-4)
 >>>>>>> Stashed changes
 
     for epoch in range(epochs):
@@ -31,8 +33,10 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
                 #start = time.time()
                 optimizer.zero_grad()
 
+                reconstruction = model(train_tensor)
                 loss = mse(reconstruction,train_tensor)
                 loss.backward()
+                nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
                 train_losses.append(loss.item())
             #print(time.time() - start, end=" ")
@@ -42,6 +46,7 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         model.eval()
         with th.no_grad():
             for val_tensor in val_tensors:
+                reconstruction = model(val_tensor)
                 loss = mse(reconstruction,val_tensor)
                 #print(loss.item())
                 val_losses.append(loss.item())
@@ -58,6 +63,9 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
+        #if early_stopper.stopping_condition(val_loss):
+        #    print("Early stopping condition met, stopping training")
+        #    break
 
     model.load_state_dict(best_model)
     return model.eval(), loss_over_time
@@ -71,10 +79,18 @@ with open("val_tensors_analog_feats.pkl", "rb") as pklfile:
 
 device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
+for i in range(len(train_tensors)):
+    train_tensors[i] = train_tensors[i].to(device)
+
+for i in range(len(val_tensors)):
+    val_tensors[i] = val_tensors[i].to(device)
+
+
 lstm_ae = LSTM_AE(8, 8, 32, 0.2, device).to(device)
-lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors,epochs = 50 , lr = 1e-3, device = device)
+lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors, epochs = 100, lr = 1e-3, device = device)
 
 with open("lstm_ae_analog_8_32_150_1e-3.pkl", "wb") as modelpkl:
-    pkl.dump(lstm_ae,modelpkl)
+    pkl.dump(lstm_ae, modelpkl)
 
 with open("lstm_ae_analog_8_32_150_1e-3_losses.pkl", "wb") as lossespkl:
+    pkl.dump(loss_over_time, lossespkl)
