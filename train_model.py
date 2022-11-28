@@ -1,11 +1,6 @@
-import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
 import torch as th
 from torch import nn, optim
-import torch.nn.functional as F
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 import copy
 import time
 import pickle as pkl
@@ -21,7 +16,10 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
     best_model = copy.deepcopy(model.state_dict())
     best_loss = 100000.0
 
+<<<<<<< Updated upstream
     early_stopper = EarlyStopping(3, 1e-3, 1e-4)
+=======
+>>>>>>> Stashed changes
 
     for epoch in range(epochs):
         model.train()
@@ -33,7 +31,6 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
                 #start = time.time()
                 optimizer.zero_grad()
 
-                reconstruction = model(train_tensor.to(device))
                 loss = mse(reconstruction,train_tensor)
                 loss.backward()
                 optimizer.step()
@@ -45,7 +42,6 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         model.eval()
         with th.no_grad():
             for val_tensor in val_tensors:
-                reconstruction = model(val_tensor.to(device))
                 loss = mse(reconstruction,val_tensor)
                 #print(loss.item())
                 val_losses.append(loss.item())
@@ -62,9 +58,6 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
-        if early_stopper.stopping_condition(val_loss):
-            print("Early stopping condition met, stopping training")
-            break
 
     model.load_state_dict(best_model)
     return model.eval(), loss_over_time
@@ -85,4 +78,3 @@ with open("lstm_ae_analog_8_32_150_1e-3.pkl", "wb") as modelpkl:
     pkl.dump(lstm_ae,modelpkl)
 
 with open("lstm_ae_analog_8_32_150_1e-3_losses.pkl", "wb") as lossespkl:
-    pkl.dump(loss_over_time,lossespkl)

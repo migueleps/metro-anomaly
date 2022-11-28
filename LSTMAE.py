@@ -14,17 +14,17 @@ class Encoder(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.lstm1 = nn.LSTM(input_size = self.input_dim,
-                            hidden_size = self.emb_dim,
+                            hidden_size = self.hidden_dim,
                             batch_first = True)
-        #self.lstm2 = nn.LSTM(input_size = self.hidden_dim,
-        #                    hidden_size = embedding_dim,
-        #                    batch_first = True)
+        self.lstm2 = nn.LSTM(input_size = self.hidden_dim,
+                            hidden_size = embedding_dim,
+                            batch_first = True)
 
 
     def forward(self, x):
-        #x, (_, _) = self.lstm1(x)
-        #x = self.dropout(x)
-        _, (hidden, _) = self.lstm1(x)
+        x, (_, _) = self.lstm1(x)
+        x = self.dropout(x)
+        _, (hidden, _) = self.lstm2(x)
         return hidden
 
 
@@ -37,20 +37,20 @@ class Decoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
 
-        #self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout)
         self.lstm1 = nn.LSTM(input_size = self.emb_dim,
                             hidden_size = self.emb_dim,
                             batch_first = True)
-        #self.lstm2 = nn.LSTM(input_size = self.emb_dim,
-        #                    hidden_size = self.hidden_dim,
-        #                    batch_first = True)
-        self.output_layer = nn.Linear(in_features = self.emb_dim,
+        self.lstm2 = nn.LSTM(input_size = self.emb_dim,
+                            hidden_size = self.hidden_dim,
+                            batch_first=True)
+        self.output_layer = nn.Linear(in_features = self.hidden_dim,
                                       out_features = self.output_dim)
 
     def forward(self, x):
         x, (_, _) = self.lstm1(x)
-        #x = self.dropout(x)
-        #x, (_, _) = self.lstm2(x)
+        x = self.dropout(x)
+        x, (_, _) = self.lstm2(x)
         return self.output_layer(x)
 
 
