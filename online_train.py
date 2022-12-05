@@ -7,13 +7,13 @@ import tqdm
 import copy
 
 
-def yield_tensors(list_of_cycles, cycle_inds, blacklist, device):
-    first_cycle, last_cycle = cycle_inds # last cycle is meant to not be included, the interval is [start,end)
+def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):
+    first_cycle, _ = cycle_inds # last cycle is meant to not be included, the interval is [start,end)
     tensor_list = []
-    for cycle in range(first_cycle, last_cycle):
-        if cycle in blacklist:
+    for ind, cycle in enumerate(list_of_cycles):
+        if ind+first_cycle in blacklist:
             continue
-        tensor_list.append(list_of_cycles[cycle].to(device))
+        tensor_list.append(cycle.to(device))
     return tensor_list
 
 
@@ -28,14 +28,14 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         model.train()
         train_losses = []
         val_losses = []
-        with tqdm.tqdm(train_tensors, unit="examples") as tepoch:
+        with tqdm.tqdm(train_tensors, unit="cycles") as tepoch:
             for train_tensor in tepoch:
                 tepoch.set_description(f"Epoch {epoch+1}")
                 optimizer.zero_grad()
                 reconstruction = model(train_tensor)
                 loss = mse(reconstruction, train_tensor)
                 loss.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), 3)
+                nn.utils.clip_grad_norm_(model.parameters(), 1)
                 optimizer.step()
                 train_losses.append(loss.item())
 
@@ -52,15 +52,13 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         loss_over_time['train'].append(train_loss)
         loss_over_time['val'].append(val_loss)
 
-        if val_loss < best_loss:
-            best_loss = val_loss
-            best_model = copy.deepcopy(model.state_dict())
+        #if val_loss < best_loss:
+        #    best_loss = val_loss
+        #    best_model = copy.deepcopy(model.state_dict())
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
-        if train_loss == np.nan:
-            exit(1)
 
-    model.load_state_dict(best_model)
+    #model.load_state_dict(best_model)
     return model, loss_over_time
 
 
@@ -78,6 +76,15 @@ def predict(model, test_tensors, device, tqdm_desc):
     return test_losses
 
 
+def simple_lowpass_filter(arr, alpha):
+    y = arr[0]
+    filtered_arr = []
+    for elem in arr[1:]:
+        y = y + alpha * (elem - y)
+        filtered_arr.append(y)
+    return filtered_arr
+
+
 def extreme_anomaly(dist):
     q25, q75 = np.quantile(dist, [0.25,0.75])
     return q75 + 3*(q75-q25)
@@ -89,36 +96,49 @@ def anomaly_inds(anomalies, test_inds):
     return anom_inds + i_first
 
 
-with open("all_tensors_analog_feats.pkl", "rb") as tensorpkl:
-    all_tensors = pkl.load(tensorpkl)
-
 with open("online_train_val_test_inds.pkl", "rb") as indspkl:
     train_inds, val_inds, test_inds = pkl.load(indspkl)
 
 device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 lstm_ae = LSTM_AE(8, 8, 32, 0.2, device).to(device)
 
+#lstm_ae.load_state_dict(th.load("online_2_lstm_ae_analog_feats_32_8_100_1e-3.pt"))
+
 losses_over_time = {}
 blacklist = set()
 
-for loop in range(len(train_inds)):
+for loop in range(6):
+
     print(f"STARTING LOOP {loop+1}")
-    train_tensors = yield_tensors(all_tensors, train_inds[loop], blacklist, device)
-    val_tensors = yield_tensors(all_tensors, val_inds[loop], blacklist, device)
-    lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors, epochs = 100, lr = 1e-4, device = device)
+
+    with open(f"train_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+        train_tensors = pkl.load(tensorpkl)
+
+    with open(f"test_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+        test_tensors = pkl.load(tensorpkl)
+
+    with open(f"val_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+        val_tensors = pkl.load(tensorpkl)
+
+    train_tensors = filter_tensors(train_tensors, train_inds[loop], blacklist, device)
+    val_tensors = filter_tensors(val_tensors, val_inds[loop], blacklist, device)
+    lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors, epochs = 100, lr = 1e-3, device = device)
     train_losses = predict(lstm_ae, train_tensors, device, "Calculating training error distribution")
 
-    test_tensors = yield_tensors(all_tensors, test_inds[loop], [], device)
+    test_tensors = filter_tensors(test_tensors, test_inds[loop], [], device)
     test_losses = predict(lstm_ae, test_tensors, device, "Testing on new data")
 
     anomaly_thres = extreme_anomaly(train_losses)
-    anomalies = np.array(test_losses) > anomaly_thres
 
-    blacklist.update(anomaly_inds(anomalies,test_inds[loop]))
+    filtered_test_losses = simple_lowpass_filter(test_losses, 0.05)
 
-    losses_over_time[loop] = {"train": train_losses, "test": test_losses}
+    anomalies = np.array(filtered_test_losses) > anomaly_thres
 
-with open("online_losses_lstm_ae_analog_feats_8_32_100_1e-4.pkl", "rb") as lossfile:
-    pkl.dump(losses_over_time, lossfile)
+    blacklist.update(anomaly_inds(anomalies, test_inds[loop]))
 
-th.save(lstm_ae.state_dict(), "online_lstm_ae_analog_feats_8_32_100_1e-4.pkl")
+    losses_over_time[loop] = {"train": train_losses, "test": test_losses, "filtered": filtered_test_losses, "blacklist": blacklist}
+
+    with open(f"online_{loop}_losses_lstm_ae_analog_feats_32_8_100_1e-3.pkl", "wb") as lossfile:
+        pkl.dump(losses_over_time, lossfile)
+
+    th.save(lstm_ae.state_dict(), f"online_{loop}_lstm_ae_analog_feats_32_8_100_1e-3.pt")

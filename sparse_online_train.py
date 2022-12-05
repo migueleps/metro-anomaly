@@ -12,12 +12,15 @@ sparsity_parameter = 0.05
 
 
 def sparsity_loss(target_activation, hidden_outputs, device):
-    average_activation = th.mean(th.sigmoid(hidden_outputs), 1)
+    average_activation = th.mean(hidden_outputs, 1)
     target_activations = th.tensor([target_activation] * average_activation.shape[1]).to(device)
     kl_div_part1 = th.log(target_activations/average_activation)
     kl_div_part2 = th.log((1-target_activations)/(1-average_activation))
     return th.sum(target_activation * kl_div_part1 + (1-target_activation) * kl_div_part2)
 
+
+def sparsity_l1_loss(hidden_outputs, device):
+    
 
 def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):
     first_cycle, _ = cycle_inds # last cycle is meant to not be included, the interval is [start,end)
@@ -66,9 +69,9 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         loss_over_time['train'].append(train_loss)
         loss_over_time['val'].append(val_loss)
 
-        if val_loss < best_loss:
-            best_loss = val_loss
-            best_model = copy.deepcopy(model.state_dict())
+        #if val_loss < best_loss:
+        #    best_loss = val_loss
+        #    best_model = copy.deepcopy(model.state_dict())
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
@@ -88,6 +91,15 @@ def predict(model, test_tensors, device, tqdm_desc):
                 loss = mse(reconstruction, test_tensor)
                 test_losses.append(loss.item())
     return test_losses
+
+
+def simple_lowpass_filter(arr, alpha):
+    y = arr[0]
+    filtered_arr = []
+    for elem in arr[1:]:
+        y = y + alpha * (elem - y)
+        filtered_arr.append(y)
+    return filtered_arr
 
 
 def extreme_anomaly(dist):
@@ -110,7 +122,7 @@ lstm_sae = LSTM_SAE(8, 16, 32, 0.2, device).to(device)
 losses_over_time = {}
 blacklist = set()
 
-for loop in range(len(train_inds)):
+for loop in range(6):
 
     print(f"STARTING LOOP {loop+1}")
 
@@ -125,20 +137,23 @@ for loop in range(len(train_inds)):
 
     train_tensors = filter_tensors(train_tensors, train_inds[loop], blacklist, device)
     val_tensors = filter_tensors(val_tensors, val_inds[loop], blacklist, device)
-    lstm_sae, loss_over_time = train_model(lstm_sae, train_tensors, val_tensors, epochs = 50, lr = 1e-3, device = device)
+    lstm_sae, loss_over_time = train_model(lstm_sae, train_tensors, val_tensors, epochs = 100, lr = 1e-3, device = device)
     train_losses = predict(lstm_sae, train_tensors, device, "Calculating training error distribution")
 
     test_tensors = filter_tensors(test_tensors, test_inds[loop], [], device)
     test_losses = predict(lstm_sae, test_tensors, device, "Testing on new data")
 
     anomaly_thres = extreme_anomaly(train_losses)
-    anomalies = np.array(test_losses) > anomaly_thres
+
+    filtered_test_losses = simple_lowpass_filter(test_losses, 0.05)
+
+    anomalies = np.array(filtered_test_losses) > anomaly_thres
 
     blacklist.update(anomaly_inds(anomalies, test_inds[loop]))
 
-    losses_over_time[loop] = {"train": train_losses, "test": test_losses}
+    losses_over_time[loop] = {"train": train_losses, "test": test_losses, "filtered": filtered_test_losses, "blacklist": blacklist}
 
-    with open(f"online_{loop}_losses_lstm_sae_analog_feats_32_16_50_1e-3.pkl", "wb") as lossfile:
+    with open(f"online_{loop}_losses_lstm_sae_analog_feats_32_16_50_1e-3_nosigmoid.pkl", "wb") as lossfile:
         pkl.dump(losses_over_time, lossfile)
 
-    th.save(lstm_sae.state_dict(), f"online_{loop}_lstm_sae_analog_feats_32_16_50_1e-3.pkl")
+    th.save(lstm_sae.state_dict(), f"online_{loop}_lstm_sae_analog_feats_32_16_50_1e-3_nosigmoid.pt")
