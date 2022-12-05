@@ -7,7 +7,7 @@ from LSTM_SAE import LSTM_SAE
 import tqdm
 import copy
 
-
+th.autograd.set_detect_anomaly(True)
 INIT_LOOP = 0
 END_LOOP = 5
 
@@ -78,7 +78,7 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
         train_loss = np.mean(train_losses)
         val_loss = np.mean(val_losses)
 
-        if train_loss.isnan() or val_loss.isnan():
+        if np.isnan(train_loss) or np.isnan(val_loss):
             print("Found nan in loss")
 
         loss_over_time['train'].append(train_loss)
@@ -91,7 +91,7 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
-    printf(f"Loading model from epoch {best_epoch+1} with validation loss {best_loss}")
+    print(f"Loading model from epoch {best_epoch+1} with validation loss {best_loss}")
     model.load_state_dict(best_model)
     return model, loss_over_time, best_loss
 
@@ -169,13 +169,13 @@ def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklis
     with open(f"online_{loop_no}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
         pkl.dump(losses_over_time, lossfile)
 
-    th.save(lstm_ae.state_dict(), f"online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
+    th.save(model.state_dict(), f"online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
 
     return blacklist, new_best_loss
 
 
 for loop in range(INIT_LOOP, END_LOOP+1):
 
-    model_string = "" if loop == INIT_LOOP else f"online_{loop_no-1}_{model_string}_{EPOCHS}_{LR}.pt"
+    model_string = "" if loop == INIT_LOOP else f"online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
     prev_best_loss = best_loss if loop > INIT_LOOP else 10000.
     blacklist, best_loss = execute_train_test_loop(loop, prev_best_loss, model, model_string, blacklist)
