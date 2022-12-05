@@ -3,11 +3,39 @@ import torch as th
 from torch import nn, optim
 import pickle as pkl
 from LSTMAE import LSTM_AE
+from LSTM_SAE import LSTM_SAE
 import tqdm
 import copy
 
 
-def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):
+INIT_LOOP = 0
+END_LOOP = 5
+
+device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+EPOCHS = 100
+LR = 1e-3
+LPF_ALPHA = 0.05
+DROPOUT = 0.2
+HIDDEN = 32
+EMBEDDING = 8
+FEATS = "analog_feats"
+FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
+NFEATS = FEATS_TO_NUMBER[FEATS]
+
+MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
+MODEL_NAME = "lstm_ae"
+
+model = MODELS[MODEL_NAME](NFEATS, EMBEDDING, HIDDEN, DROPOUT, device).to(device)
+blacklist = set()
+
+model_string = f"{MODEL_NAME}_{FEATS}_{EMBEDDING}_{HIDDEN}"
+
+
+with open("online_train_val_test_inds.pkl", "rb") as indspkl:
+    train_inds, val_inds, test_inds = pkl.load(indspkl)
+
+
+def filter_tensors(list_of_cycles, cycle_inds, blacklist):
     first_cycle, _ = cycle_inds # last cycle is meant to not be included, the interval is [start,end)
     tensor_list = []
     for ind, cycle in enumerate(list_of_cycles):
@@ -17,12 +45,13 @@ def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):
     return tensor_list
 
 
-def train_model(model, train_tensors, val_tensors, epochs, lr, device):
+def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
     optimizer = optim.Adam(model.parameters(), lr=lr)
     mse = nn.MSELoss(reduction="mean").to(device)
     loss_over_time = {"train": [], "val": []}
-    best_loss = 100000.0
+    best_loss = prev_best_loss
     best_model = copy.deepcopy(model.state_dict())
+    best_epoch = 0
 
     for epoch in range(epochs):
         model.train()
@@ -52,17 +81,19 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, device):
         loss_over_time['train'].append(train_loss)
         loss_over_time['val'].append(val_loss)
 
-        #if val_loss < best_loss:
-        #    best_loss = val_loss
-        #    best_model = copy.deepcopy(model.state_dict())
+        if val_loss < best_loss:
+            best_loss = val_loss
+            best_model = copy.deepcopy(model.state_dict())
+            best_epoch = epoch
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
-    #model.load_state_dict(best_model)
-    return model, loss_over_time
+    printf(f"Loading model from epoch {best_epoch+1} with validation loss {best_loss}")
+    model.load_state_dict(best_model)
+    return model, loss_over_time, best_loss
 
 
-def predict(model, test_tensors, device, tqdm_desc):
+def predict(model, test_tensors, tqdm_desc):
     mse = nn.MSELoss(reduction="mean").to(device)
     test_losses = []
     with th.no_grad():
@@ -96,49 +127,52 @@ def anomaly_inds(anomalies, test_inds):
     return anom_inds + i_first
 
 
-with open("online_train_val_test_inds.pkl", "rb") as indspkl:
-    train_inds, val_inds, test_inds = pkl.load(indspkl)
+def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklist):
 
-device = th.device('cuda' if th.cuda.is_available() else 'cpu')
-lstm_ae = LSTM_AE(8, 8, 32, 0.2, device).to(device)
+    print(f"STARTING LOOP {loop_no+1}")
 
-#lstm_ae.load_state_dict(th.load("online_2_lstm_ae_analog_feats_32_8_100_1e-3.pt"))
-
-losses_over_time = {}
-blacklist = set()
-
-for loop in range(6):
-
-    print(f"STARTING LOOP {loop+1}")
-
-    with open(f"train_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+    with open(f"train_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         train_tensors = pkl.load(tensorpkl)
 
-    with open(f"test_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+    with open(f"test_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         test_tensors = pkl.load(tensorpkl)
 
-    with open(f"val_tensors_{loop}_analog_feats.pkl", "rb") as tensorpkl:
+    with open(f"val_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         val_tensors = pkl.load(tensorpkl)
 
-    train_tensors = filter_tensors(train_tensors, train_inds[loop], blacklist, device)
-    val_tensors = filter_tensors(val_tensors, val_inds[loop], blacklist, device)
-    lstm_ae, loss_over_time = train_model(lstm_ae, train_tensors, val_tensors, epochs = 100, lr = 1e-3, device = device)
-    train_losses = predict(lstm_ae, train_tensors, device, "Calculating training error distribution")
+    if load_model != "":
+        model.load_state_dict(th.load(load_model))
 
-    test_tensors = filter_tensors(test_tensors, test_inds[loop], [], device)
-    test_losses = predict(lstm_ae, test_tensors, device, "Testing on new data")
+    train_tensors = filter_tensors(train_tensors, train_inds[loop_no], blacklist)
+    val_tensors = filter_tensors(val_tensors, val_inds[loop_no], blacklist)
+
+    model, loss_over_time, new_best_loss = train_model(model, train_tensors, val_tensors, epochs = EPOCHS, lr = LR, prev_best_loss = prev_best_loss)
+
+    train_losses = predict(model, train_tensors, "Calculating training error distribution")
+
+    test_tensors = filter_tensors(test_tensors, test_inds[loop_no], [])
+    test_losses = predict(model, test_tensors, "Testing on new data")
 
     anomaly_thres = extreme_anomaly(train_losses)
 
-    filtered_test_losses = simple_lowpass_filter(test_losses, 0.05)
+    filtered_test_losses = simple_lowpass_filter(test_losses, LPF_ALPHA)
 
     anomalies = np.array(filtered_test_losses) > anomaly_thres
 
-    blacklist.update(anomaly_inds(anomalies, test_inds[loop]))
+    blacklist.update(anomaly_inds(anomalies, test_inds[loop_no]))
 
-    losses_over_time[loop] = {"train": train_losses, "test": test_losses, "filtered": filtered_test_losses, "blacklist": blacklist}
+    losses_over_time = {"train": train_losses, "test": test_losses, "filtered": filtered_test_losses, "blacklist": blacklist}
 
-    with open(f"online_{loop}_losses_lstm_ae_analog_feats_32_8_100_1e-3.pkl", "wb") as lossfile:
+    with open(f"online_{loop_no}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
         pkl.dump(losses_over_time, lossfile)
 
-    th.save(lstm_ae.state_dict(), f"online_{loop}_lstm_ae_analog_feats_32_8_100_1e-3.pt")
+    th.save(lstm_ae.state_dict(), f"online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
+
+    return blacklist, new_best_loss
+
+
+for loop in range(INIT_LOOP, END_LOOP+1):
+
+    model_string = "" if loop == INIT_LOOP else f"online_{loop_no-1}_{model_string}_{EPOCHS}_{LR}.pt"
+    prev_best_loss = best_loss if loop > INIT_LOOP else 10000.
+    blacklist, best_loss = execute_train_test_loop(loop, prev_best_loss, model, model_string, blacklist)
