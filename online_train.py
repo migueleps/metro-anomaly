@@ -78,6 +78,9 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
         train_loss = np.mean(train_losses)
         val_loss = np.mean(val_losses)
 
+        if train_loss.isnan() or val_loss.isnan():
+            print("Found nan in loss")
+
         loss_over_time['train'].append(train_loss)
         loss_over_time['val'].append(val_loss)
 
