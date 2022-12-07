@@ -7,7 +7,6 @@ import torch.nn.functional as F
 class Encoder(nn.Module):
 
     def __init__(self, input_dim, embedding_dim, dropout, lstm_layers):
-
         super(Encoder, self).__init__()
 
         self.input_dim = input_dim
@@ -20,8 +19,8 @@ class Encoder(nn.Module):
                             dropout = dropout)
 
     def forward(self, x):
-        _, (hidden, _) = self.lstm(x)
-        return hidden[-1]
+        activations, (hidden, _) = self.lstm(x)
+        return hidden[-1], activations
 
 
 class Decoder(nn.Module):
@@ -37,21 +36,22 @@ class Decoder(nn.Module):
                             num_layers = lstm_layers,
                             dropout = dropout)
 
-
     def forward(self, x):
         x, (_, _) = self.lstm(x)
         return x
 
 
-class LSTM_AE(nn.Module):
+class LSTM_SAE(nn.Module):
 
-    def __init__(self, n_features, emb_dim, dropout, lstm_layers, device):
-        super(LSTM_AE,self).__init__()
+    def __init__(self, n_features, emb_dim, dropout, lstm_layers, sparsity_weight, sparsity_parameter, device):
+        super(LSTM_SAE, self).__init__()
 
         self.embedding_dim = emb_dim
         self.dropout = dropout
         self.n_features = n_features
         self.device = device
+        self.sparsity_weight = sparsity_weight
+        self.sparsity_parameter = sparsity_parameter
 
         self.encode = Encoder(input_dim = n_features,
                               embedding_dim = self.embedding_dim,
@@ -65,20 +65,25 @@ class LSTM_AE(nn.Module):
         self.output_layer = nn.Linear(in_features = self.embedding_dim,
                                       out_features = self.n_features)
 
-    def compute_loss(self, reconstruction, original):
-        return F.mse_loss(reconstruction, original)
-
+    def sparsity_penalty(self, activations):
+        average_activation = th.mean(activations, 1)
+        target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[1]).to(self.device)
+        kl_div_part1 = th.log(target_activations/average_activation)
+        kl_div_part2 = th.log((1-target_activations)/(1-average_activation))
+        return th.sum(self.sparsity_parameter * kl_div_part1 + (1-self.sparsity_parameter) * kl_div_part2)
 
     def forward(self, x):
 
         unpacked_original, seq_lengths = pad_packed_sequence(x, batch_first = True)
 
-        latent_vector = self.encode(x)
+        latent_vector, activations = self.encode(x)
+        loss = self.sparsity_weight * self.sparsity_penalty(activations)
+
         max_seq_length = max(seq_lengths)
 
         new_mini_batch = []
-        for i,tensor in enumerate(latent_vector):
-            padded_tensor = th.cat([tensor.repeat(seq_lengths[i],1), th.zeros(max_seq_length - seq_lengths[i], self.embedding_dim).to(self.device)])
+        for i, tensor in enumerate(latent_vector):
+            padded_tensor = th.cat([tensor.repeat(seq_lengths[i], 1), th.zeros(max_seq_length - seq_lengths[i], self.embedding_dim).to(self.device)])
             new_mini_batch.append(padded_tensor)
 
         mini_batch_LV = th.stack(new_mini_batch).to(self.device)
@@ -89,10 +94,8 @@ class LSTM_AE(nn.Module):
 
         unpacked_decoded, _ = pad_packed_sequence(decoded_x, batch_first=True)
 
-        loss = 0
-
-        for i,tensor in enumerate(unpacked_decoded):
+        for i, tensor in enumerate(unpacked_decoded):
             linear_out = self.output_layer(tensor[:seq_lengths[i]])
-            loss += self.compute_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
+            loss += F.mse_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
 
         return loss/seq_lengths.shape[0]

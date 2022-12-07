@@ -19,7 +19,7 @@ def sparsity_loss(target_activation, hidden_outputs, device):
     return th.sum(target_activation * kl_div_part1 + (1-target_activation) * kl_div_part2)
 
 
-def sparsity_l1_loss(hidden_outputs, device):
+#def sparsity_l1_loss(hidden_outputs, device):
     
 
 def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):

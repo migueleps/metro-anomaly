@@ -3,20 +3,18 @@ import torch as th
 from torch import nn, optim
 import pickle as pkl
 from LSTMAE_mini_batch import LSTM_AE
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pack_padded_sequence
 import tqdm
 import copy
 
 #th.autograd.set_detect_anomaly(True)
 INIT_LOOP = 0
-END_LOOP = 1
+END_LOOP = 17
 
 device = th.device('cuda' if th.cuda.is_available() else 'cpu')
-EPOCHS = 1
+EPOCHS = 100
 LR = 1e-3
-LPF_ALPHA = 0.05
 DROPOUT = 0.2
-HIDDEN = 32
 EMBEDDING = 8
 BATCH_SIZE = 32
 LSTM_LAYERS = 2
@@ -28,6 +26,7 @@ MODELS = {"lstm_ae": LSTM_AE}#, "lstm_sae": LSTM_SAE}
 MODEL_NAME = "lstm_ae"
 
 model = MODELS[MODEL_NAME](NFEATS, EMBEDDING,  DROPOUT, LSTM_LAYERS, device).to(device)
+model_string = f"{MODEL_NAME}_{FEATS}_{EMBEDDING}"
 
 blacklist = set()
 if INIT_LOOP > 0:
@@ -36,11 +35,7 @@ if INIT_LOOP > 0:
             loss_over_time = pkl.load(lossfile)
             blacklist = loss_over_time["blacklist"]
     except:
-        continue
-
-
-model_string = f"{MODEL_NAME}_{FEATS}_{EMBEDDING}_{HIDDEN}"
-
+        pass
 
 with open("online_train_val_test_inds.pkl", "rb") as indspkl:
     train_inds, val_inds, test_inds = pkl.load(indspkl)
@@ -55,7 +50,7 @@ def create_batch(tensor_list, batch_size):
         mini_batch = []
         for tensor in tensors_to_batch:
             tensor = tensor.squeeze()
-            padded_tensor = th.cat([tensor, th.zeros(longest_seq - tensor.shape[0], tensor.shape[1])])
+            padded_tensor = th.cat([tensor, th.zeros(longest_seq - tensor.shape[0], tensor.shape[1]).to(device)])
             mini_batch.append(padded_tensor)
         tensor_mini_batch = th.stack(mini_batch)
         packed = pack_padded_sequence(tensor_mini_batch, batch_tensor_lengths, batch_first=True, enforce_sorted=False)
@@ -197,6 +192,6 @@ def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklis
 
 for loop in range(INIT_LOOP, END_LOOP+1):
 
-    load_model = "" if True and else f"online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
+    load_model = "" if True else f"online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
     prev_best_loss = best_loss if loop > INIT_LOOP else 10000.
     blacklist, best_loss = execute_train_test_loop(loop, prev_best_loss, model, load_model, blacklist)
