@@ -77,7 +77,10 @@ class LSTM_SAE(nn.Module):
         unpacked_original, seq_lengths = pad_packed_sequence(x, batch_first = True)
 
         latent_vector, activations = self.encode(x)
-        loss = self.sparsity_weight * self.sparsity_penalty(activations)
+        sparsity_loss = 0
+        unpacked_activations, _ = pad_packed_sequence(activations, batch_first=True)
+        for activation_tensor in unpacked_activations:
+            sparsity_loss += self.sparsity_penalty(activation_tensor)
 
         max_seq_length = max(seq_lengths)
 
@@ -93,9 +96,9 @@ class LSTM_SAE(nn.Module):
         decoded_x = self.decode(packed_LV)
 
         unpacked_decoded, _ = pad_packed_sequence(decoded_x, batch_first=True)
-
+        mse_loss = 0
         for i, tensor in enumerate(unpacked_decoded):
             linear_out = self.output_layer(tensor[:seq_lengths[i]])
-            loss += F.mse_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
+            mse_loss += F.mse_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
 
-        return loss/seq_lengths.shape[0]
+        return mse_loss/seq_lengths.shape[0] + self.sparsity_weight * sparsity_loss

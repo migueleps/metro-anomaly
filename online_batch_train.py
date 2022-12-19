@@ -16,29 +16,34 @@ device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 EPOCHS = 100
 LR = 1e-3
 DROPOUT = 0.2
-EMBEDDING = 8
+EMBEDDING = 64
 BATCH_SIZE = 32
 LSTM_LAYERS = 2
+sparsity_weight = 1
+sparsity_parameter = 0.05
 FEATS = "analog_feats"
 FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
 NFEATS = FEATS_TO_NUMBER[FEATS]
 
 MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
-MODEL_NAME = "lstm_ae"
+MODEL_NAME = "lstm_sae"
 
-model = MODELS[MODEL_NAME](NFEATS, EMBEDDING,  DROPOUT, LSTM_LAYERS, device).to(device)
+results_folder = "results/"
+data_folder = "data/"
+
+model = MODELS[MODEL_NAME](NFEATS, EMBEDDING,  DROPOUT, LSTM_LAYERS, sparsity_weight = sparsity_weight, sparsity_parameter = sparsity_parameter, device = device).to(device)
 model_string = f"{MODEL_NAME}_{FEATS}_{EMBEDDING}"
 
 blacklist = set()
 if INIT_LOOP > 0:
     try:
-        with open(f"online_{INIT_LOOP-1}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
+        with open(f"{results_folder}online_{INIT_LOOP-1}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
             loss_over_time = pkl.load(lossfile)
             blacklist = loss_over_time["blacklist"]
     except:
         pass
 
-with open("online_train_val_test_inds.pkl", "rb") as indspkl:
+with open(f"{data_folder}online_train_val_test_inds.pkl", "rb") as indspkl:
     train_inds, val_inds, test_inds = pkl.load(indspkl)
 
 
@@ -149,13 +154,13 @@ def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklis
 
     print(f"STARTING LOOP {loop_no+1}")
 
-    with open(f"train_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
+    with open(f"{data_folder}train_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         train_tensors = pkl.load(tensorpkl)
 
-    with open(f"test_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
+    with open(f"{data_folder}test_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         test_tensors = pkl.load(tensorpkl)
 
-    with open(f"val_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
+    with open(f"{data_folder}val_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
         val_tensors = pkl.load(tensorpkl)
 
     if load_model != "":
@@ -183,16 +188,16 @@ def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklis
 
     losses_over_time = {"train": train_losses, "test": test_losses, "blacklist": blacklist} #"filtered": filtered_test_losses,
 
-    with open(f"online_{loop_no}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
+    with open(f"{results_folder}online_{loop_no}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
         pkl.dump(losses_over_time, lossfile)
 
-    th.save(model.state_dict(), f"online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
+    th.save(model.state_dict(), f"{results_folder}online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
 
     return blacklist, new_best_loss
 
 
 for loop in range(INIT_LOOP, END_LOOP+1):
 
-    load_model = "" if True else f"online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
+    load_model = "" if True else f"{results_folder}online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
     prev_best_loss = best_loss if loop > INIT_LOOP else 10000.
     blacklist, best_loss = execute_train_test_loop(loop, prev_best_loss, model, load_model, blacklist)
