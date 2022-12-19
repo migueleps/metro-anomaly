@@ -3,6 +3,7 @@ import torch as th
 from torch import nn, optim
 import pickle as pkl
 from LSTMAE_mini_batch import LSTM_AE
+from LSTM_SAE_mini_batch import LSTM_SAE
 from torch.nn.utils.rnn import pack_padded_sequence
 import tqdm
 import copy
@@ -22,7 +23,7 @@ FEATS = "analog_feats"
 FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
 NFEATS = FEATS_TO_NUMBER[FEATS]
 
-MODELS = {"lstm_ae": LSTM_AE}#, "lstm_sae": LSTM_SAE}
+MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
 MODEL_NAME = "lstm_ae"
 
 model = MODELS[MODEL_NAME](NFEATS, EMBEDDING,  DROPOUT, LSTM_LAYERS, device).to(device)
