@@ -66,8 +66,8 @@ class LSTM_SAE(nn.Module):
                                       out_features = self.n_features)
 
     def sparsity_penalty(self, activations):
-        average_activation = th.mean(th.abs(activations), 1)
-        target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[1]).to(self.device)
+        average_activation = th.mean(th.abs(activations), 0)
+        target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[0]).to(self.device)
         kl_div_part1 = th.log(target_activations/average_activation)
         kl_div_part2 = th.log((1-target_activations)/(1-average_activation))
         return th.sum(self.sparsity_parameter * kl_div_part1 + (1-self.sparsity_parameter) * kl_div_part2)
@@ -79,8 +79,8 @@ class LSTM_SAE(nn.Module):
         latent_vector, activations = self.encode(x)
         sparsity_loss = 0
         unpacked_activations, _ = pad_packed_sequence(activations, batch_first=True)
-        for activation_tensor in unpacked_activations:
-            sparsity_loss += self.sparsity_penalty(activation_tensor)
+        for i,activation_tensor in enumerate(unpacked_activations):
+            sparsity_loss += self.sparsity_penalty(activation_tensor[:seq_lengths[i]])
 
         max_seq_length = max(seq_lengths)
 
