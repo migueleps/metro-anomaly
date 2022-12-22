@@ -136,3 +136,22 @@ dmypy.json
 train_tensors_analog_feats.pkl
 dataset_train.csv
 all_tensors_analog_feats.pkl
+data/train_tensors_0_all_feats.pkl
+data/train_tensors_10_all_feats.pkl
+data/train_tensors_11_all_feats.pkl
+data/train_tensors_12_all_feats.pkl
+data/train_tensors_13_all_feats.pkl
+data/train_tensors_14_all_feats.pkl
+data/train_tensors_15_all_feats.pkl
+data/train_tensors_16_all_feats.pkl
+data/train_tensors_17_all_feats.pkl
+data/train_tensors_1_all_feats.pkl
+data/train_tensors_2_all_feats.pkl
+data/train_tensors_3_all_feats.pkl
+data/train_tensors_4_all_feats.pkl
+data/train_tensors_5_all_feats.pkl
+data/train_tensors_6_all_feats.pkl
+data/train_tensors_7_all_feats.pkl
+data/train_tensors_8_all_feats.pkl
+data/train_tensors_9_all_feats.pkl
+Results Analysis.ipynb
