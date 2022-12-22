@@ -51,7 +51,7 @@ def create_batch(tensor_list, batch_size):
     packed_batches = []
     for batch_number in range(0,len(tensor_list),batch_size):
         tensors_to_batch = tensor_list[batch_number:(batch_number+batch_size)]
-        batch_tensor_lengths = [tensor.shape[1] for tensor in tensors_to_batch]
+        batch_tensor_lengths = th.tensor([tensor.shape[1] for tensor in tensors_to_batch])
         longest_seq = max(batch_tensor_lengths)
         mini_batch = []
         for tensor in tensors_to_batch:
