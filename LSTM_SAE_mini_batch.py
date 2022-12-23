@@ -103,6 +103,6 @@ class LSTM_SAE(nn.Module):
             mse_loss += F.mse_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
 
         avg_mse_loss = mse_loss/seq_lengths.shape[0]
-        loss = avg_mse_loss if self.training else avg_mse_loss + sparsity_loss
+        loss = avg_mse_loss + sparsity_loss if self.training else avg_mse_loss
 
         return loss
