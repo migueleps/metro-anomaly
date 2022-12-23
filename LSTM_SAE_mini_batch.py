@@ -97,12 +97,15 @@ class LSTM_SAE(nn.Module):
         decoded_x = self.decode(packed_LV)
 
         unpacked_decoded, _ = pad_packed_sequence(decoded_x, batch_first=True)
+
+        reconstructions = []
         mse_loss = 0
         for i, tensor in enumerate(unpacked_decoded):
             linear_out = self.output_layer(tensor[:seq_lengths[i]])
             mse_loss += F.mse_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
+            reconstructions.append(linear_out)
 
         avg_mse_loss = mse_loss/seq_lengths.shape[0]
         loss = avg_mse_loss + sparsity_loss if self.training else avg_mse_loss
 
-        return loss
+        return loss, reconstructions

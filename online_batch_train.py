@@ -88,7 +88,7 @@ def train_model(model, batch_train_tensors, batch_val_tensors, epochs, lr, prev_
             for packed_train_batch in tepoch:
                 tepoch.set_description(f"Epoch {epoch+1}")
                 optimizer.zero_grad()
-                batch_loss = model(packed_train_batch)
+                batch_loss, _ = model(packed_train_batch)
                 batch_loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 1)
                 optimizer.step()
@@ -97,7 +97,7 @@ def train_model(model, batch_train_tensors, batch_val_tensors, epochs, lr, prev_
         with th.no_grad():
             model.eval()
             for packed_val_batch in batch_val_tensors:
-                batch_loss = model(packed_val_batch)
+                batch_loss, _ = model(packed_val_batch)
                 val_losses.append(batch_loss.item())
 
         train_loss = np.mean(train_losses)
@@ -125,7 +125,7 @@ def predict(model, test_tensors, tqdm_desc):
         with tqdm.tqdm(test_tensors, unit="examples") as tepoch:
             for test_tensor in tepoch:
                 tepoch.set_description(tqdm_desc)
-                loss = model(test_tensor)
+                loss, _ = model(test_tensor)
                 test_losses.append(loss.item())
     return test_losses
 
