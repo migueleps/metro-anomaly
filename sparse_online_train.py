@@ -32,6 +32,43 @@ def filter_tensors(list_of_cycles, cycle_inds, blacklist, device):
     return tensor_list
 
 
+def generate_cycle_tensors(df, cycle_inds, cols):
+    scaler = StandardScaler()
+    tensor_list = []
+    for i_s, i_f in cycle_inds:
+        df_slice = df.iloc[i_s:i_f,:]
+        df_slice = df_slice.loc[:,cols]
+        df_slice[df_slice.columns] = scaler.fit_transform(df_slice[df_slice.columns])
+        tensor_chunk = th.tensor(df_slice.values).unsqueeze(0).float()
+        tensor_list.append(tensor_chunk)
+    return tensor_list
+
+all_tensors = generate_cycle_tensors(metro, all_cycles, analog_sensors)
+
+def yield_tensors_full(list_of_cycles, cycle_inds):
+    first_cycle, last_cycle = cycle_inds
+    tensor_list = []
+    for cycle in range(first_cycle, last_cycle):
+        tensor_list.append(list_of_cycles[cycle])
+    return tensor_list
+
+for loop in range(len(train_inds)):
+    train_tensors = yield_tensors_full(all_tensors, train_inds[loop])
+    val_tensors = yield_tensors_full(all_tensors, val_inds[loop])
+    test_tensors = yield_tensors_full(all_tensors, test_inds[loop])
+    with open(f"data/train_tensors_{loop}_analog_feats.pkl","wb") as tensorpkl:
+        pkl.dump(train_tensors,tensorpkl)
+    with open(f"data/val_tensors_{loop}_analog_feats.pkl","wb") as tensorpkl:
+        pkl.dump(val_tensors,tensorpkl)
+    with open(f"data/test_tensors_{loop}_analog_feats.pkl","wb") as tensorpkl:
+        pkl.dump(test_tensors,tensorpkl)
+
+def assign_date_test_inds(test_inds):
+    dates_cycles = []
+    for test_ind in range(test_inds[0],test_inds[1]):
+        dates_cycles.append(all_cycles_dates[test_ind][0])
+    return dates_cycles
+
 def train_model(model, train_tensors, val_tensors, epochs, lr, device):
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-3)
     mse = nn.MSELoss(reduction="mean").to(device)
