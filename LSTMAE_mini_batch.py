@@ -45,7 +45,7 @@ class Decoder(nn.Module):
 
 class LSTM_AE(nn.Module):
 
-    def __init__(self, n_features, emb_dim, dropout, lstm_layers, device):
+    def __init__(self, n_features, emb_dim, dropout, lstm_layers, device, *args):
         super(LSTM_AE,self).__init__()
 
         self.embedding_dim = emb_dim
