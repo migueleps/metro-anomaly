@@ -149,7 +149,7 @@ def load_parameters():
 
     args = SimpleNamespace()
 
-    args.INIT_LOOP = 0
+    args.INIT_LOOP = 14
     args.END_LOOP = 17
 
     args.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
@@ -168,7 +168,7 @@ def load_parameters():
     args.FEATS = "analog_feats"
     args.NUMBER_FEATURES = FEATS_TO_NUMBER[args.FEATS]
 
-    args.MODEL_NAME = "lstm_sae"
+    args.MODEL_NAME = "lstm_ae"
 
     args.results_folder = "results/"
     args.data_folder = "data/"
@@ -181,16 +181,17 @@ def load_parameters():
     _{args.EPOCHS}_{args.LR}.pkl"
     args.model_saving_string = lambda loop_no: f"{args.results_folder}online_{loop_no}\
     _{args.model_string}_{args.EPOCHS}_{args.LR}.pt"
+
     if args.INIT_LOOP > 0:
         try:
-            with open(args.results_string(args.INIT_LOOP-1), "wb") as loss_file:
+            with open(args.results_string(args.INIT_LOOP-1), "rb") as loss_file:
                 loss_over_time = pkl.load(loss_file)
                 args.blacklist = loss_over_time["blacklist"]
         except FileNotFoundError:
             print("Tried loading blacklist from previous results but failed, starting with empty blacklist.")
             pass
 
-    with open(f"{args.data_folder}online_train_val_test_indices.pkl", "rb") as indices_pkl:
+    with open(f"{args.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
         args.train_indices, args.val_indices, args.test_indices = pkl.load(indices_pkl)
 
     return args
@@ -207,6 +208,8 @@ def main(arguments):
                                          arguments.device,
                                          arguments.sparsity_weight,
                                          arguments.sparsity_parameter).to(arguments.device)
+    if arguments.INIT_LOOP > 0:
+        model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
 
     for loop in range(arguments.INIT_LOOP, arguments.END_LOOP+1):
         model = execute_train_test_loop(loop, model, arguments)
