@@ -89,9 +89,10 @@ class LSTM_AE(nn.Module):
         unpacked_decoded, _ = pad_packed_sequence(decoded_x, batch_first=True)
 
         loss = 0
-
+        reconstructions = []
         for i, tensor in enumerate(unpacked_decoded):
             linear_out = self.output_layer(tensor[:seq_lengths[i]])
             loss += self.compute_loss(linear_out, unpacked_original[i][:seq_lengths[i]])
+            reconstructions.append(linear_out)
 
-        return loss / seq_lengths.shape[0]
+        return loss / seq_lengths.shape[0], reconstructions
