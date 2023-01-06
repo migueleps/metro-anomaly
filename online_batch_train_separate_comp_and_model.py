@@ -213,13 +213,11 @@ def load_parameters():
 
     args.blacklist = set()
 
-    args.results_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_losses_{args.model_string}\
-    _{args.EPOCHS}_{args.LR}_separate_comp.pkl"
-    args.model_saving_string = lambda loop_no, model_label: f"{args.results_folder}online_{loop_no}\
-    _{args.model_string}{model_label}_{args.EPOCHS}_{args.LR}_separate_comp.pt"
+    args.results_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_losses_{args.model_string}_{args.EPOCHS}_{args.LR}_separate_comp.pkl"
+    args.model_saving_string = lambda loop_no, model_label: f"{args.results_folder}online_{loop_no}_{args.model_string}{model_label}_{args.EPOCHS}_{args.LR}_separate_comp.pt"
     if args.INIT_LOOP > 0:
         try:
-            with open(args.results_string(args.INIT_LOOP-1), "wb") as lossfile:
+            with open(args.results_string(args.INIT_LOOP-1), "rb") as lossfile:
                 loss_over_time = pkl.load(lossfile)
                 args.blacklist = loss_over_time["blacklist"]
         except FileNotFoundError:
