@@ -153,7 +153,10 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}"
+    print_hidden = "_".join([f"{hidden}" for hidden in arguments.HIDDEN_DIMS])
+    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{print_hidden}"
+
+    print(f"Starting execution of model: {arguments.model_string}")
 
     arguments.blacklist = set()
 
