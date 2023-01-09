@@ -21,7 +21,7 @@ class EarlyStopping:
             else:
                 self.min_so_far = validation_loss
                 self.counter_decrease = 0
-        elif validation_loss > (self.min_so_far + self.delta_getting_worse):
+        elif np.abs(validation_loss - self.min_so_far) < self.delta_getting_worse:
             self.counter_increase += 1
 
         return self.counter_increase >= self.successive_iters or self.counter_decrease >= self.successive_iters
