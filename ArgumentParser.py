@@ -33,4 +33,5 @@ def parse_arguments():
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
     parser.add_argument("-end", dest="END_LOOP", type=int, default=17)
 
-    return parser
+    args = parser.parse_args()
+    return args
