@@ -94,7 +94,7 @@ class LSTM_SAE(nn.Module):
                               lstm_layers=self.lstm_layers).to(device)
 
     def sparsity_penalty(self, activations):
-        average_activation = th.mean(th.abs(activations), 0)
+        average_activation = th.mean(th.abs(activations.squeeze()), 0)
         target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[0]).to(self.device)
         kl_div_part1 = th.log(target_activations / average_activation)
         kl_div_part2 = th.log((1 - target_activations) / (1 - average_activation))
