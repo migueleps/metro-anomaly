@@ -125,7 +125,7 @@ def execute_online_loop(model, args):
 
     all_test_tensors = []
     for loop in range(args.END_LOOP):
-        with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
             test_tensors = pkl.load(tensor_pkl)
             all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
 
@@ -133,10 +133,8 @@ def execute_online_loop(model, args):
 
     losses_over_time = {"test": test_losses}
 
-    with open(args.results_string(loop_no), "wb") as loss_file:
+    with open(args.results_string("complete"), "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
-
-    th.save(model.state_dict(), args.model_saving_string(loop_no))
 
     return model
 
