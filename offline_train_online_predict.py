@@ -121,7 +121,7 @@ def offline_train(model, args):
     return model
 
 
-def execute_online_loop(loop_no, model, args):
+def execute_online_loop(model, args):
 
     all_test_tensors = []
     for loop in range(args.END_LOOP):
