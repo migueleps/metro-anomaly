@@ -12,7 +12,7 @@ def parse_arguments():
 
     parser.add_argument("-dropout", dest="DROPOUT", type=float, default=0.2)
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
-    parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int)
+    parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, action="append")
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=1)
 
     parser.add_argument("-sw", dest="sparsity_weight", type=float, default=1.,
