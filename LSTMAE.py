@@ -18,9 +18,9 @@ class Encoder(nn.Module):
         input_dims = [input_dim] + hidden_dims
         output_dims = hidden_dims + [embedding_dim]
 
-        self.lstm_layers = [nn.LSTM(input_size=input_dims[i],
-                                    hidden_size=output_dims[i],
-                                    batch_first=True) for i in range(lstm_layers)]
+        self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
+                                                  hidden_size=output_dims[i],
+                                                  batch_first=True) for i in range(lstm_layers)])
 
     def forward(self, x):
         for lstm_cell in self.lstm_layers[:-1]:
@@ -45,9 +45,9 @@ class Decoder(nn.Module):
         input_dims = [embedding_dim] + hidden_dims
         output_dims = hidden_dims + [output_dim]
 
-        self.lstm_layers = [nn.LSTM(input_size=input_dims[i],
-                                    hidden_size=output_dims[i],
-                                    batch_first=True) for i in range(lstm_layers)]
+        self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
+                                                  hidden_size=output_dims[i],
+                                                  batch_first=True) for i in range(lstm_layers)])
 
     def forward(self, x):
         for lstm_cell in self.lstm_layers[:-1]:
