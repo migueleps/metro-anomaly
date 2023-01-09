@@ -123,13 +123,13 @@ def offline_train(model, args):
 
 def execute_online_loop(loop_no, model, args):
 
-    print(f"Starting online loop {loop_no+1}")
+    all_test_tensors = []
+    for loop in range(args.END_LOOP):
+        with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            test_tensors = pkl.load(tensor_pkl)
+            all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
 
-    with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-        test_tensors = pkl.load(tensor_pkl)
-        test_tensors = [tensor.to(args.device) for tensor in test_tensors]
-
-    test_losses = predict(model, test_tensors, "Testing on new data")
+    test_losses = predict(model, all_test_tensors, "Testing on new data")
 
     losses_over_time = {"test": test_losses}
 
@@ -195,13 +195,11 @@ def main(arguments):
         if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
             model.load_state_dict(th.load(arguments.model_saving_string("offline")))
         else:
-            model, train_losses = offline_train(model, arguments)
-            arguments.train_losses = train_losses
+            model = offline_train(model, arguments)
     else:
         model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
 
-    for loop in range(arguments.INIT_LOOP, arguments.END_LOOP+1):
-        model = execute_online_loop(loop, model, arguments)
+    execute_online_loop(model, arguments)
 
 
 if __name__ == "__main__":
