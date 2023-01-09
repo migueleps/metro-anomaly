@@ -113,7 +113,7 @@ def offline_train(model, args):
                                         lr=args.LR,
                                         args=args)
 
-    with open(args.offline_results_string("offline"), "wb") as loss_file:
+    with open(args.results_string("offline"), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
     th.save(model.state_dict(), args.model_saving_string("offline"))
@@ -192,7 +192,7 @@ def main(arguments):
                                          arguments.sparsity_parameter).to(arguments.device)
 
     if arguments.INIT_LOOP == 0:
-        if os.path.exists(arguments.model_saving_string("offline")):
+        if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
             model.load_state_dict(th.load(arguments.model_saving_string("offline")))
         else:
             model, train_losses = offline_train(model, arguments)

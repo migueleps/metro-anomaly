@@ -32,6 +32,6 @@ def parse_arguments():
 
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
     parser.add_argument("-end", dest="END_LOOP", type=int, default=17)
-
+    parser.add_argument("-force-training", dest="force_training", action="store_true")
     args = parser.parse_args()
     return args
