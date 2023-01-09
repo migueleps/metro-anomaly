@@ -1,10 +1,11 @@
 import numpy as np
 
+
 class EarlyStopping:
 
-    def __init__(self, succ_iters, delta_worse, delta_better):
+    def __init__(self, successive_iters, delta_worse, delta_better):
 
-        self.successive_iters = succ_iters
+        self.successive_iters = successive_iters
         self.delta_getting_worse = delta_worse
         self.delta_getting_better = delta_better
         self.counter_increase = 0

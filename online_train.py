@@ -5,64 +5,44 @@ import pickle as pkl
 from LSTMAE import LSTM_AE
 from LSTM_SAE import LSTM_SAE
 import tqdm
-import copy
-
-th.autograd.set_detect_anomaly(True)
-INIT_LOOP = 0
-END_LOOP = 5
-
-device = th.device('cuda' if th.cuda.is_available() else 'cpu')
-EPOCHS = 100
-LR = 1e-3
-LPF_ALPHA = 0.05
-DROPOUT = 0.2
-HIDDEN = 32
-EMBEDDING = 8
-FEATS = "analog_feats"
-FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
-NFEATS = FEATS_TO_NUMBER[FEATS]
-
-MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
-MODEL_NAME = "lstm_ae"
-
-model = MODELS[MODEL_NAME](NFEATS, EMBEDDING, HIDDEN, DROPOUT, device).to(device)
-blacklist = set()
-
-model_string = f"{MODEL_NAME}_{FEATS}_{EMBEDDING}_{HIDDEN}"
+from types import SimpleNamespace
+from EarlyStopper import EarlyStopping
 
 
-with open("online_train_val_test_inds.pkl", "rb") as indspkl:
-    train_inds, val_inds, test_inds = pkl.load(indspkl)
-
-
-def filter_tensors(list_of_cycles, cycle_inds, blacklist):
-    first_cycle, _ = cycle_inds # last cycle is meant to not be included, the interval is [start,end)
+def filter_tensors(list_of_cycles, cycle_indices, blacklist, args):
+    first_cycle, _ = cycle_indices  # last cycle is meant to not be included, the interval is [start,end)
     tensor_list = []
     for ind, cycle in enumerate(list_of_cycles):
         if ind+first_cycle in blacklist:
             continue
-        tensor_list.append(cycle.to(device))
+        tensor_list.append(cycle.to(args.device))
     return tensor_list
 
 
-def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
-    optimizer = optim.Adam(model.parameters(), lr=lr)
-    mse = nn.MSELoss(reduction="mean").to(device)
-    loss_over_time = {"train": [], "val": []}
-    best_loss = prev_best_loss
-    best_model = copy.deepcopy(model.state_dict())
-    best_epoch = 0
+def train_model(model,
+                train_tensors,
+                val_tensors,
+                epochs,
+                lr,
+                args):
 
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=args.weight_decay)
+    loss_over_time = {"train": [], "val": []}
+    early_stopper = EarlyStopping(args.succesive_iters,
+                                  args.delta_worse,
+                                  args.delta_better)
     for epoch in range(epochs):
         model.train()
         train_losses = []
         val_losses = []
-        with tqdm.tqdm(train_tensors, unit="cycles") as tepoch:
-            for train_tensor in tepoch:
-                tepoch.set_description(f"Epoch {epoch+1}")
+        with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
+            for train_tensor in tqdm_epoch:
+                if epochs > 1:
+                    tqdm_epoch.set_description(f"Epoch {epoch+1}")
+                else:
+                    tqdm_epoch.set_description(f"Training on online data")
                 optimizer.zero_grad()
-                reconstruction = model(train_tensor)
-                loss = mse(reconstruction, train_tensor)
+                loss, _ = model(train_tensor)
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 1)
                 optimizer.step()
@@ -71,111 +51,192 @@ def train_model(model, train_tensors, val_tensors, epochs, lr, prev_best_loss):
         with th.no_grad():
             model.eval()
             for val_tensor in val_tensors:
-                reconstruction = model(val_tensor)
-                loss = mse(reconstruction, val_tensor)
+                loss, _ = model(val_tensor)
                 val_losses.append(loss.item())
 
         train_loss = np.mean(train_losses)
-        val_loss = np.mean(val_losses)
-
-        if np.isnan(train_loss) or np.isnan(val_loss):
-            print("Found nan in loss")
+        val_loss = np.mean(val_losses) if len(val_tensors) > 0 else 0
 
         loss_over_time['train'].append(train_loss)
         loss_over_time['val'].append(val_loss)
 
-        if val_loss < best_loss:
-            best_loss = val_loss
-            best_model = copy.deepcopy(model.state_dict())
-            best_epoch = epoch
-
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
-    print(f"Loading model from epoch {best_epoch+1} with validation loss {best_loss}")
-    model.load_state_dict(best_model)
-    return model, loss_over_time, best_loss
+        if early_stopper.stopping_condition(val_loss):
+            break
+
+    return model, loss_over_time
 
 
 def predict(model, test_tensors, tqdm_desc):
-    mse = nn.MSELoss(reduction="mean").to(device)
     test_losses = []
     with th.no_grad():
         model.eval()
-        with tqdm.tqdm(test_tensors, unit="examples") as tepoch:
-            for test_tensor in tepoch:
-                tepoch.set_description(tqdm_desc)
-                reconstruction = model(test_tensor)
-                loss = mse(reconstruction, test_tensor)
+        with tqdm.tqdm(test_tensors, unit="cycles") as tqdm_epoch:
+            for test_tensor in tqdm_epoch:
+                tqdm_epoch.set_description(tqdm_desc)
+                loss, _ = model(test_tensor)
                 test_losses.append(loss.item())
     return test_losses
 
 
-def simple_lowpass_filter(arr, alpha):
-    y = arr[0]
-    filtered_arr = []
-    for elem in arr[1:]:
-        y = y + alpha * (elem - y)
-        filtered_arr.append(y)
-    return filtered_arr
-
-
-def extreme_anomaly(dist):
-    q25, q75 = np.quantile(dist, [0.25,0.75])
+def extreme_anomaly(loop, args):
+    dist_window = args.train_losses[args.train_indices[loop]]
+    dist = dist_window[np.where(dist_window > -1)[0]]
+    q25, q75 = np.quantile(dist, [0.25, 0.75])
     return q75 + 3*(q75-q25)
 
 
-def anomaly_inds(anomalies, test_inds):
-    i_first, i_last = test_inds
-    anom_inds = np.where(anomalies)[0]
-    return anom_inds + i_first
+def anomaly_indices(anomalies, test_indices):
+    i_first, i_last = test_indices
+    anom_indices = np.where(anomalies)[0]
+    return anom_indices + i_first
 
 
-def execute_train_test_loop(loop_no, prev_best_loss, model, load_model, blacklist):
+def offline_train(model, args):
 
-    print(f"STARTING LOOP {loop_no+1}")
+    print(f"Starting offline training")
 
-    with open(f"train_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
-        train_tensors = pkl.load(tensorpkl)
+    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        train_tensors = pkl.load(tensor_pkl)
 
-    with open(f"test_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
-        test_tensors = pkl.load(tensorpkl)
+    with open(f"{args.data_folder}val_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        val_tensors = pkl.load(tensor_pkl)
 
-    with open(f"val_tensors_{loop}_{FEATS}.pkl", "rb") as tensorpkl:
-        val_tensors = pkl.load(tensorpkl)
-
-    if load_model != "":
-        model.load_state_dict(th.load(load_model))
-
-    train_tensors = filter_tensors(train_tensors, train_inds[loop_no], blacklist)
-    val_tensors = filter_tensors(val_tensors, val_inds[loop_no], blacklist)
-
-    model, loss_over_time, new_best_loss = train_model(model, train_tensors, val_tensors, epochs = EPOCHS, lr = LR, prev_best_loss = prev_best_loss)
+    model, loss_over_time = train_model(model,
+                                        train_tensors,
+                                        val_tensors,
+                                        epochs=args.EPOCHS,
+                                        lr=args.LR,
+                                        args=args)
 
     train_losses = predict(model, train_tensors, "Calculating training error distribution")
 
-    test_tensors = filter_tensors(test_tensors, test_inds[loop_no], [])
+    with open(args.offline_results_string, "wb") as loss_file:
+        pkl.dump(loss_over_time, loss_file)
+
+    th.save(model.state_dict(), args.model_saving_string("offline"))
+
+    return model, np.array([-1]*len(val_tensors) + train_losses)
+
+
+def execute_online_loop(loop_no, model, args):
+
+    print(f"Starting online loop {loop_no+1}")
+
+    with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        test_tensors = pkl.load(tensor_pkl)
+
     test_losses = predict(model, test_tensors, "Testing on new data")
 
-    anomaly_thres = extreme_anomaly(train_losses)
+    anomaly_threshold = extreme_anomaly(loop_no, args)
+    anomalies = np.array(test_losses) > anomaly_threshold
+    detected_anomalies = anomaly_indices(anomalies, args.test_indices[loop_no])
+    args.blacklist.update(detected_anomalies)
 
-    filtered_test_losses = simple_lowpass_filter(test_losses, LPF_ALPHA)
+    train_tensors = filter_tensors(test_tensors, args.test_indices[loop_no], args.blacklist, args)
+    model, _ = train_model(model,
+                           train_tensors,
+                           [],
+                           epochs=1,
+                           lr=args.LR,
+                           args=args)
 
-    anomalies = np.array(filtered_test_losses) > anomaly_thres
+    train_losses = predict(model, test_tensors, "Calculating new training error distribution")
+    args.train_losses = np.append(args.train_losses, train_losses)
+    args.train_losses[detected_anomalies] = -1
 
-    blacklist.update(anomaly_inds(anomalies, test_inds[loop_no]))
+    losses_over_time = {"test": test_losses, "blacklist": args.blacklist}
 
-    losses_over_time = {"train": train_losses, "test": test_losses, "filtered": filtered_test_losses, "blacklist": blacklist}
+    with open(args.results_string(loop_no), "wb") as loss_file:
+        pkl.dump(losses_over_time, loss_file)
 
-    with open(f"online_{loop_no}_losses_{model_string}_{EPOCHS}_{LR}.pkl", "wb") as lossfile:
-        pkl.dump(losses_over_time, lossfile)
+    th.save(model.state_dict(), args.model_saving_string(loop_no))
 
-    th.save(model.state_dict(), f"online_{loop_no}_{model_string}_{EPOCHS}_{LR}.pt")
-
-    return blacklist, new_best_loss
+    return model
 
 
-for loop in range(INIT_LOOP, END_LOOP+1):
+def load_parameters():
 
-    model_string = "" if loop == INIT_LOOP else f"online_{loop-1}_{model_string}_{EPOCHS}_{LR}.pt"
-    prev_best_loss = best_loss if loop > INIT_LOOP else 10000.
-    blacklist, best_loss = execute_train_test_loop(loop, prev_best_loss, model, model_string, blacklist)
+    FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
+
+    args = SimpleNamespace()
+
+    args.INIT_LOOP = 0
+    args.END_LOOP = 17
+
+    args.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+
+    args.MODEL_NAME = "lstm_ae"
+
+    args.EPOCHS = 1000
+    args.LR = 1e-3
+    args.weight_decay = 0 if args.MODEL_NAME == "lstm_ae" else 1e-3
+
+    args.succesive_iters = 10
+    args.delta_worse = 0.05
+    args.delta_better = 0.005
+
+    args.DROPOUT = 0.2
+    args.EMBEDDING = 6
+    args.LSTM_LAYERS = 3
+    args.HIDDEN_DIMS = [16, 8]
+
+    args.sparsity_weight = 1
+    args.sparsity_parameter = 0.05
+
+    args.FEATS = "analog_feats"
+    args.NUMBER_FEATURES = FEATS_TO_NUMBER[args.FEATS]
+
+    args.results_folder = "results/"
+    args.data_folder = "data/"
+
+    args.model_string = f"{args.MODEL_NAME}_{args.FEATS}_{args.EMBEDDING}"
+
+    args.blacklist = set()
+
+    args.results_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_losses_{args.model_string}_{args.EPOCHS}_{args.LR}.pkl"
+    args.model_saving_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_{args.model_string}_{args.EPOCHS}_{args.LR}.pt"
+    args.offline_results_string = f"{args.results_folder}online_offline_losses_{args.model_string}_{args.EPOCHS}_{args.LR}.pkl"
+
+    if args.INIT_LOOP > 0:
+        try:
+            with open(args.results_string(args.INIT_LOOP-1), "rb") as loss_file:
+                loss_over_time = pkl.load(loss_file)
+                args.blacklist = loss_over_time["blacklist"]
+        except FileNotFoundError:
+            print("Tried loading blacklist from previous results but failed, starting with empty blacklist.")
+            pass
+
+    with open(f"{args.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
+        args.train_indices, args.val_indices, args.test_indices = pkl.load(indices_pkl)
+
+    return args
+
+
+def main(arguments):
+
+    MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
+
+    model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
+                                         arguments.EMBEDDING,
+                                         arguments.HIDDEN_DIMS,
+                                         arguments.DROPOUT,
+                                         arguments.LSTM_LAYERS,
+                                         arguments.device,
+                                         arguments.sparsity_weight,
+                                         arguments.sparsity_parameter).to(arguments.device)
+
+    if arguments.INIT_LOOP == 0:
+        model, train_losses = offline_train(model, arguments)
+        arguments.train_losses = train_losses
+    else:
+        model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
+
+    for loop in range(arguments.INIT_LOOP, arguments.END_LOOP+1):
+        model = execute_online_loop(loop, model, arguments)
+
+
+if __name__ == "__main__":
+    argument_dict = load_parameters()
+    main(argument_dict)
