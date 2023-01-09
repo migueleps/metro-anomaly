@@ -99,11 +99,11 @@ def offline_train(model, args):
 
     with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
         train_tensors = pkl.load(tensor_pkl)
-        train_tensors = train_tensors.to(args.device)
+        train_tensors = [tensor.to(args.device) for tensor in train_tensors]
 
     with open(f"{args.data_folder}val_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
         val_tensors = pkl.load(tensor_pkl)
-        val_tensors = val_tensors.to(args.device)
+        val_tensors = [tensor.to(args.device) for tensor in val_tensors]
 
     model, loss_over_time = train_model(model,
                                         train_tensors,
@@ -128,7 +128,7 @@ def execute_online_loop(loop_no, model, args):
 
     with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
         test_tensors = pkl.load(tensor_pkl)
-        test_tensors = test_tensors.to(args.device)
+        test_tensors = [tensor.to(args.device) for tensor in test_tensors]
 
     test_losses = predict(model, test_tensors, "Testing on new data")
 
