@@ -15,8 +15,8 @@ class Encoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        input_dims = [input_dim] + hidden_dims[:-1]
-        output_dims = hidden_dims[1:] + [embedding_dim]
+        input_dims = [input_dim] + hidden_dims
+        output_dims = hidden_dims + [embedding_dim]
 
         self.lstm_layers = [nn.LSTM(input_size=input_dims[i],
                                     hidden_size=output_dims[i],
@@ -42,8 +42,8 @@ class Decoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        input_dims = [embedding_dim] + hidden_dims[:-1]
-        output_dims = hidden_dims[1:] + [output_dim]
+        input_dims = [embedding_dim] + hidden_dims
+        output_dims = hidden_dims + [output_dim]
 
         self.lstm_layers = [nn.LSTM(input_size=input_dims[i],
                                     hidden_size=output_dims[i],
