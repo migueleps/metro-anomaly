@@ -43,19 +43,21 @@ class Decoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout)
 
-        input_dims = [embedding_dim] + hidden_dims
-        output_dims = hidden_dims + [output_dim]
+        input_dims = [embedding_dim, embedding_dim] + hidden_dims[:-1]
+        output_dims = [embedding_dim] + hidden_dims
 
         self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
                                                   hidden_size=output_dims[i],
                                                   batch_first=True) for i in range(lstm_layers)])
 
+        self.output_layer = nn.Linear(in_features=hidden_dims[-1],
+                                      out_features=output_dim)
+
     def forward(self, x):
-        for lstm_cell in self.lstm_layers[:-1]:
+        for lstm_cell in self.lstm_layers:
             x, (_, _) = lstm_cell(x)
             x = self.dropout(x)
-        hidden_outs, (_, _) = self.lstm_layers[-1](x)
-        return hidden_outs
+        return self.output_layer(x)
 
 
 class LSTM_SAE(nn.Module):
