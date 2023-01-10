@@ -126,7 +126,7 @@ def offline_train(model, args):
 def execute_online_loop(model, args):
 
     all_test_tensors = []
-    for loop in range(args.END_LOOP):
+    for loop in range(args.END_LOOP+1):
         with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
             test_tensors = pkl.load(tensor_pkl)
             all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
