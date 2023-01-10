@@ -118,10 +118,13 @@ if __name__ == "__main__":
 
     for alpha in alpha_range:
         print(f"[Alpha: {alpha:.2f}]")
-        d_early = output_metrics(output_lpf_binary[alpha], ground_truth_early)
-        dicts_early[alpha] = d_early
         d_both = output_metrics(output_lpf_binary[alpha], ground_truth_both, print_label="Early and actual anomaly")
         dicts_both[alpha] = d_both
+
+    for alpha in alpha_range:
+        print(f"[Alpha: {alpha:.2f}]")
+        d_early = output_metrics(output_lpf_binary[alpha], ground_truth_early)
+        dicts_early[alpha] = d_early
 
     best_alpha("f1", "F1 - Early detection", dicts_early)
     best_alpha("f1", "F1 - Early and actual anomaly", dicts_both)
