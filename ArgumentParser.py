@@ -27,7 +27,8 @@ def parse_arguments():
     parser.add_argument("-delta_worse", dest="delta_worse", type=float, default=0.02)
     parser.add_argument("-delta_better", dest="delta_better", type=float, default=0.001)
 
-    parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae"],
+    parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
+                                                              "lstm_all_layer_sae"],
                         required=True)
 
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)

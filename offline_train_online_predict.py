@@ -5,6 +5,7 @@ from torch import nn, optim
 import pickle as pkl
 from LSTMAE import LSTM_AE
 from LSTM_SAE import LSTM_SAE
+from LSTM_AllLayerSAE import LSTM_AllLayerSAE
 import tqdm
 from EarlyStopper import EarlyStopping
 from ArgumentParser import parse_arguments
@@ -181,7 +182,7 @@ def load_parameters(arguments):
 
 def main(arguments):
 
-    MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
+    MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE, "lstm_all_layer_sae": LSTM_AllLayerSAE}
 
     model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
                                          arguments.EMBEDDING,
