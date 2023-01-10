@@ -99,7 +99,7 @@ if __name__ == "__main__":
     binary_test_losses = np.array(np.array(test_losses) > anomaly_value, dtype=int)
     alpha_range = np.append(np.arange(0.01, 0.1, 0.01), np.arange(0.1, 1, 0.1))
 
-    output_lpf_binary = {alpha: np.array(simple_lowpass_filter(binary_test_losses, alpha) > 0.5)
+    output_lpf_binary = {alpha: np.array(np.array(simple_lowpass_filter(binary_test_losses, alpha)) > 0.5, dtype=int)
                          for alpha in alpha_range}
 
     for alpha in alpha_range:
