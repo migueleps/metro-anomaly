@@ -84,7 +84,7 @@ def output_metrics(bin_output, ground_truth, print_flag=True, print_label="Early
     metrics = evaluate_model(failures, ground_truth)
     if print_flag:
         print(f"[{print_label}] False Positives: {metrics['fp']}\nPrecision: {prec(metrics):.3f}\n\
-            Recall: {rec(metrics):.3f}\nF1: {f1(metrics):.3f}\n")
+Recall: {rec(metrics):.3f}\nF1: {f1(metrics):.3f}\n")
     return dict(precision=prec(metrics), recall=rec(metrics), f1=f1(metrics), false_positives=metrics['fp'],
                 false_negatives=metrics['fn'])
 
@@ -103,5 +103,6 @@ if __name__ == "__main__":
                          for alpha in alpha_range}
 
     for alpha in alpha_range:
+        print(f"[Alpha: {alpha:.2f}]")
         _ = output_metrics(output_lpf_binary[alpha], ground_truth_early)
         _ = output_metrics(output_lpf_binary[alpha], ground_truth_both, print_label="Early and actual anomaly")
