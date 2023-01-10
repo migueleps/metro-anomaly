@@ -113,12 +113,14 @@ def offline_train(model, args):
                                         lr=args.LR,
                                         args=args)
 
+    train_losses = predict(model, train_tensors, "Calculating training error distribution")
+
     with open(args.results_string("offline"), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
     th.save(model.state_dict(), args.model_saving_string("offline"))
 
-    return model
+    return model, train_losses
 
 
 def execute_online_loop(model, args):
@@ -131,7 +133,7 @@ def execute_online_loop(model, args):
 
     test_losses = predict(model, all_test_tensors, "Testing on new data")
 
-    losses_over_time = {"test": test_losses}
+    losses_over_time = {"test": test_losses, "train": args.train_losses}
 
     with open(args.results_string("complete"), "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
@@ -193,7 +195,8 @@ def main(arguments):
         if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
             model.load_state_dict(th.load(arguments.model_saving_string("offline")))
         else:
-            model = offline_train(model, arguments)
+            model, train_losses = offline_train(model, arguments)
+            arguments.train_losses = train_losses
     else:
         model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
 
