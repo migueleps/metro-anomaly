@@ -64,6 +64,7 @@ def train_model(model,
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
         if epoch > 100 and early_stopper.stopping_condition(val_loss):
+            early_stopper.print_stop_reason()
             break
 
     return model, loss_over_time
