@@ -8,6 +8,8 @@ ground_truth_early = [{1882, 1883, 1884, 1885, 1886, 1887}, {3389, 3390, 3391, 3
 ground_truth_both = [{1882, 1883, 1884, 1885, 1886, 1887, 1888}, {3389, 3390, 3391, 3392, 3393, 3394, 3395, 3396},
                      set(list(range(9098, 9357)))]
 
+alpha_range = np.append(np.arange(0.01, 0.1, 0.01), np.arange(0.1, 1, 0.1))
+
 
 def simple_lowpass_filter(arr, alpha):
     y = arr[0]
@@ -89,6 +91,16 @@ Recall: {rec(metrics):.3f}\nF1: {f1(metrics):.3f}\n")
                 false_negatives=metrics['fn'])
 
 
+def best_alpha(metric, metric_label, dictionary):
+    best_metric, alpha_of_metric = 0, 0
+    for alpha in alpha_range:
+        value = dictionary[alpha][metric]
+        if value > best_metric:
+            best_metric = value
+            alpha_of_metric = alpha
+    print(f"Best {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
+
+
 if __name__ == "__main__":
     input_file = sys.argv[1]
     with open(input_file, "rb") as loss_file:
@@ -97,12 +109,22 @@ if __name__ == "__main__":
         train_losses = tl["train"]
     anomaly_value = extreme_anomaly(train_losses)
     binary_test_losses = np.array(np.array(test_losses) > anomaly_value, dtype=int)
-    alpha_range = np.append(np.arange(0.01, 0.1, 0.01), np.arange(0.1, 1, 0.1))
 
     output_lpf_binary = {alpha: np.array(np.array(simple_lowpass_filter(binary_test_losses, alpha)) > 0.5, dtype=int)
                          for alpha in alpha_range}
 
+    dicts_early = {}
+    dicts_both = {}
+
     for alpha in alpha_range:
         print(f"[Alpha: {alpha:.2f}]")
-        _ = output_metrics(output_lpf_binary[alpha], ground_truth_early)
-        _ = output_metrics(output_lpf_binary[alpha], ground_truth_both, print_label="Early and actual anomaly")
+        d_early = output_metrics(output_lpf_binary[alpha], ground_truth_early)
+        dicts_early[alpha] = d_early
+        d_both = output_metrics(output_lpf_binary[alpha], ground_truth_both, print_label="Early and actual anomaly")
+        dicts_both[alpha] = d_both
+
+    best_alpha("f1", "F1 - Early detection", dicts_early)
+    best_alpha("f1", "F1 - Early and actual anomaly", dicts_both)
+    best_alpha("recall", "Recall - Early detection", dicts_early)
+    best_alpha("recall", "Recall - Early and actual anomaly", dicts_both)
+
