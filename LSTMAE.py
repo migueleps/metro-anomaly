@@ -97,7 +97,8 @@ class LSTM_AE(nn.Module):
 
         latent_vector, _ = self.encode(x)
 
-        stacked_LV = th.repeat_interleave(latent_vector, n_examples, dim=1).reshape(-1, n_examples, self.embedding_dim)
+        stacked_LV = th.repeat_interleave(latent_vector, n_examples,
+                                          dim=1).reshape(-1, n_examples, self.embedding_dim).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
 
         loss = F.mse_loss(reconstructed_x, x)

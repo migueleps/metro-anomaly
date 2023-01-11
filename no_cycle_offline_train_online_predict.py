@@ -77,7 +77,7 @@ def predict(model, test_tensors, tqdm_desc):
         with tqdm.tqdm(test_tensors, unit="chunks") as tqdm_epoch:
             for test_tensor in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
-                loss, _ = model(test_tensor)
+                loss, _ = model(test_tensor.unsqueeze(0))
                 test_losses.append(loss.item())
     return test_losses
 

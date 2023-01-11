@@ -12,9 +12,9 @@ def get_tensors(df, time_window, cols, step_size=20):
     index_start, index_end = min(df_red.index), max(df_red.index)
     tensor_list = []
     for i in range(index_start, index_end, step_size):
-        normalized_values = scaler.fit_transform(df_red.iloc[i:i+60, :].values)
+        normalized_values = scaler.fit_transform(df_red.iloc[i:i+120, :].values)
         tensor_chunk = th.tensor(normalized_values).float()
-        if tensor_chunk.shape[0] < 60:
+        if tensor_chunk.shape[0] < 120:
             continue
         tensor_list.append(tensor_chunk)
     return tensor_list
@@ -52,16 +52,16 @@ while prev_test_end < last_date:
     test_dates.append([prev_test_end, new_test_end])
     prev_test_end = new_test_end
 
-val_tensors = get_tensors(metro, val_dates, analog_sensors, step_size=20)
+val_tensors = get_tensors(metro, val_dates, analog_sensors, step_size=40)
 with open(f"data/val_tensors_1min_chunks_offline_analog_feats.pkl", "wb") as tensorpkl:
     pkl.dump(val_tensors, tensorpkl)
 
-train_tensors = get_tensors(metro, train_dates[0], analog_sensors, step_size=20)
+train_tensors = get_tensors(metro, train_dates[0], analog_sensors, step_size=40)
 with open(f"data/train_tensors_1min_chunks_offline_analog_feats.pkl", "wb") as tensorpkl:
     pkl.dump(train_tensors, tensorpkl)
 
 for loop in range(len(test_dates)):
-    test_tensors = get_tensors(metro, test_dates[loop], analog_sensors, step_size=20)
+    test_tensors = get_tensors(metro, test_dates[loop], analog_sensors, step_size=40)
     print(len(test_tensors))
     with open(f"data/test_tensors_1min_chunks_{loop}_analog_feats.pkl", "wb") as tensorpkl:
         pkl.dump(test_tensors, tensorpkl)

@@ -96,8 +96,8 @@ class LSTM_SAE(nn.Module):
                               lstm_layers=self.lstm_layers).to(device)
 
     def sparsity_penalty(self, activations):
-        average_activation = th.mean(th.abs(activations.squeeze()), 0)
-        target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[0]).to(self.device)
+        average_activation = th.mean(th.abs(activations), 1)
+        target_activations = th.full(average_activation.shape, self.sparsity_parameter).to(self.device)
         kl_div_part1 = th.log(target_activations / average_activation)
         kl_div_part2 = th.log((1 - target_activations) / (1 - average_activation))
         return th.sum(self.sparsity_parameter * kl_div_part1 + (1 - self.sparsity_parameter) * kl_div_part2)
@@ -108,11 +108,12 @@ class LSTM_SAE(nn.Module):
 
         latent_vector, hidden_outs = self.encode(x)
 
-        stacked_LV = latent_vector.repeat(1, n_examples, 1).to(self.device)
+        stacked_LV = th.repeat_interleave(latent_vector, n_examples,
+                                          dim=1).reshape(-1, n_examples, self.embedding_dim).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
 
         loss = F.mse_loss(reconstructed_x, x)
         if self.training:
-            loss += self.sparsity_penalty(hidden_outs)
+            loss += self.sparsity_weight * self.sparsity_penalty(hidden_outs)
 
         return loss, reconstructed_x
