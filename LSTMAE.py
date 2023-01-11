@@ -1,4 +1,5 @@
 from torch import nn
+import torch as th
 import torch.nn.functional as F
 
 
@@ -94,9 +95,9 @@ class LSTM_AE(nn.Module):
         n_examples = x.shape[1]
         assert x.shape[2] == self.n_features
 
-        latent_vector, hidden_outs = self.encode(x)
+        latent_vector, _ = self.encode(x)
 
-        stacked_LV = latent_vector.repeat(1, n_examples, 1).to(self.device)
+        stacked_LV = th.repeat_interleave(latent_vector, n_examples, dim=1).reshape(-1, n_examples, self.embedding_dim)
         reconstructed_x = self.decode(stacked_LV)
 
         loss = F.mse_loss(reconstructed_x, x)
