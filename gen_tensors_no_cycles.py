@@ -8,7 +8,7 @@ import pickle as pkl
 def get_tensors(df, time_window, cols, step_size=20):
     scaler = StandardScaler()
     time_start, time_end = time_window
-    df_red = df.loc[(df.timestamp_day >= time_start) & (df.timestamp_day < time_end), cols].reset_index()
+    df_red = df.loc[(df.timestamp_day >= time_start) & (df.timestamp_day < time_end), cols].reset_index(drop=True)
     index_start, index_end = min(df_red.index), max(df_red.index)
     tensor_list = []
     for i in range(index_start, index_end, step_size):
