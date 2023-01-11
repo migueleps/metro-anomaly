@@ -14,6 +14,7 @@ def parse_arguments():
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
     parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, action="append")
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=1)
+    parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=60)
 
     parser.add_argument("-sw", dest="sparsity_weight", type=float, default=1.,
                         help="Sparsity weight for Sparse AE")
@@ -31,6 +32,7 @@ def parse_arguments():
                                                               "lstm_all_layer_sae"],
                         required=True)
 
+    parser.add_argument("-separate_comp", dest="separate_comp", action="store_true")
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
     parser.add_argument("-end", dest="END_LOOP", type=int, default=17)
     parser.add_argument("-force-training", dest="force_training", action="store_true")
