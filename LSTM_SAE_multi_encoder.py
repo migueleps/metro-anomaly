@@ -118,7 +118,7 @@ class LSTM_SAE_MultiEncoder(nn.Module):
         n_examples_comp1 = comp1.shape[1]
         assert comp1.shape[2] == self.n_features
 
-        total_n_examples = n_examples_comp0 - n_examples_comp1
+        total_n_examples = n_examples_comp0 + n_examples_comp1
 
         latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
         latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
