@@ -96,17 +96,53 @@ def anomaly_indices(anomalies, test_indices):
     return anom_indices + i_first
 
 
+def calculate_train_losses(model, args):
+
+    if args.separate_comp:
+        with open(f"{args.data_folder}train_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp0 = pkl.load(tensor_pkl)
+        with open(f"{args.data_folder}train_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp1 = pkl.load(tensor_pkl)
+        train_tensors = [[train_tensors_comp0[i].to(args.device),
+                          train_tensors_comp1[i].to(args.device)] for i in range(len(train_tensors_comp0))]
+
+    else:
+        with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors = pkl.load(tensor_pkl)
+            train_tensors = [tensor.to(args.device) for tensor in train_tensors]
+
+    train_losses = predict(model, train_tensors, "Calculating training error distribution")
+
+    return train_losses
+
+
 def offline_train(model, args):
 
     print(f"Starting offline training")
 
-    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-        train_tensors = pkl.load(tensor_pkl)
-        train_tensors = [tensor.to(args.device) for tensor in train_tensors]
+    if args.separate_comp:
+        with open(f"{args.data_folder}train_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp0 = pkl.load(tensor_pkl)
+        with open(f"{args.data_folder}train_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp1 = pkl.load(tensor_pkl)
+        train_tensors = [[train_tensors_comp0[i].to(args.device),
+                          train_tensors_comp1[i].to(args.device)] for i in range(len(train_tensors_comp0))]
 
-    with open(f"{args.data_folder}val_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-        val_tensors = pkl.load(tensor_pkl)
-        val_tensors = [tensor.to(args.device) for tensor in val_tensors]
+        with open(f"{args.data_folder}val_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            val_tensors_comp0 = pkl.load(tensor_pkl)
+        with open(f"{args.data_folder}val_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            val_tensors_comp1 = pkl.load(tensor_pkl)
+        val_tensors = [[val_tensors_comp0[i].to(args.device),
+                        val_tensors_comp1[i].to(args.device)] for i in range(len(val_tensors_comp0))]
+
+    else:
+        with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors = pkl.load(tensor_pkl)
+            train_tensors = [tensor.to(args.device) for tensor in train_tensors]
+
+        with open(f"{args.data_folder}val_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            val_tensors = pkl.load(tensor_pkl)
+            val_tensors = [tensor.to(args.device) for tensor in val_tensors]
 
     model, loss_over_time = train_model(model,
                                         train_tensors,
@@ -128,10 +164,21 @@ def offline_train(model, args):
 def execute_online_loop(model, args):
 
     all_test_tensors = []
-    for loop in range(args.END_LOOP+1):
-        with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            test_tensors = pkl.load(tensor_pkl)
-            all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
+    if args.separate_comp:
+        for loop in range(args.END_LOOP+1):
+            t = []
+            with open(f"{args.data_folder}test_tensors_comp0_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+                test_tensors = pkl.load(tensor_pkl)
+                t.append(test_tensors)
+            with open(f"{args.data_folder}test_tensors_comp1_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+                test_tensors = pkl.load(tensor_pkl)
+                t.append(test_tensors)
+            all_test_tensors.extend([[t[0][i].to(args.device), t[1][i].to(args.device)] for i in range(len(t[0]))])
+    else:
+        for loop in range(args.END_LOOP+1):
+            with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+                test_tensors = pkl.load(tensor_pkl)
+                all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
 
     test_losses = predict(model, all_test_tensors, "Testing on new data")
 
@@ -196,6 +243,7 @@ def main(arguments):
     if arguments.INIT_LOOP == 0:
         if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
             model.load_state_dict(th.load(arguments.model_saving_string("offline")))
+            arguments.train_losses = calculate_train_losses(model, arguments)
         else:
             model, train_losses = offline_train(model, arguments)
             arguments.train_losses = train_losses
