@@ -1,130 +1,137 @@
 import torch as th
 from torch import nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
 
-    def __init__(self, input_dim, embedding_dim, dropout, lstm_layers):
+    def __init__(self,
+                 input_dim,
+                 hidden_dims,
+                 embedding_dim,
+                 dropout,
+                 lstm_layers):
+
         super(Encoder, self).__init__()
 
-        self.input_dim = input_dim
-        self.emb_dim = embedding_dim
+        self.dropout = nn.Dropout(dropout)
 
-        self.lstm = nn.LSTM(input_size = self.input_dim,
-                            hidden_size = self.emb_dim,
-                            batch_first = True,
-                            num_layers = lstm_layers,
-                            dropout = dropout)
+        input_dims = [input_dim] + hidden_dims
+        output_dims = hidden_dims + [embedding_dim]
+
+        self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
+                                                  hidden_size=output_dims[i],
+                                                  batch_first=True) for i in range(lstm_layers)])
 
     def forward(self, x):
-        activations, (hidden, _) = self.lstm(x)
-        return hidden[-1], activations
+        for lstm_cell in self.lstm_layers[:-1]:
+            x, (_, _) = lstm_cell(x)
+            x = self.dropout(x)
+        hidden_outs, (hidden, _) = self.lstm_layers[-1](x)
+        return hidden, hidden_outs
 
 
 class Decoder(nn.Module):
 
-    def __init__(self, embedding_dim, dropout, lstm_layers):
+    def __init__(self,
+                 embedding_dim,
+                 hidden_dims,
+                 output_dim,
+                 dropout,
+                 lstm_layers):
         super(Decoder, self).__init__()
 
-        self.emb_dim = embedding_dim
+        self.dropout = nn.Dropout(dropout)
 
-        self.lstm = nn.LSTM(input_size = self.emb_dim,
-                            hidden_size = self.emb_dim,
-                            batch_first = True,
-                            num_layers = lstm_layers,
-                            dropout = dropout)
+        input_dims = [embedding_dim, embedding_dim] + hidden_dims[:-1]
+        output_dims = [embedding_dim] + hidden_dims
+
+        self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
+                                                  hidden_size=output_dims[i],
+                                                  batch_first=True) for i in range(lstm_layers)])
+
+        self.output_layer = nn.Linear(in_features=hidden_dims[-1],
+                                      out_features=output_dim)
 
     def forward(self, x):
-        x, (_, _) = self.lstm(x)
-        return x
+        for lstm_cell in self.lstm_layers:
+            x, (_, _) = lstm_cell(x)
+            x = self.dropout(x)
+        return self.output_layer(x)
 
 
 class LSTM_SAE_MultiEncoder(nn.Module):
 
-    def __init__(self, n_features, emb_dim, dropout, lstm_layers, device, sparsity_weight, sparsity_parameter):
+    def __init__(self,
+                 n_features,
+                 emb_dim,
+                 hidden_dims,
+                 dropout,
+                 lstm_layers,
+                 device,
+                 sparsity_weight,
+                 sparsity_parameter):
+
         super(LSTM_SAE_MultiEncoder, self).__init__()
 
         self.embedding_dim = emb_dim
+        self.hidden_dims = hidden_dims
         self.dropout = dropout
         self.n_features = n_features
         self.device = device
+        self.lstm_layers = lstm_layers
         self.sparsity_weight = sparsity_weight
         self.sparsity_parameter = sparsity_parameter
 
-        self.encode_comp0 = Encoder(input_dim = n_features,
-                                    embedding_dim = self.embedding_dim,
-                                    dropout = self.dropout,
-                                    lstm_layers = lstm_layers).to(device)
+        self.encode_comp0 = Encoder(input_dim=self.n_features,
+                                    hidden_dims=self.hidden_dims,
+                                    embedding_dim=self.embedding_dim,
+                                    dropout=self.dropout,
+                                    lstm_layers=self.lstm_layers).to(device)
 
-        self.encode_comp1 = Encoder(input_dim = n_features,
-                                    embedding_dim = self.embedding_dim,
-                                    dropout = self.dropout,
-                                    lstm_layers = lstm_layers).to(device)
+        self.encode_comp1 = Encoder(input_dim=self.n_features,
+                                    hidden_dims=self.hidden_dims,
+                                    embedding_dim=self.embedding_dim,
+                                    dropout=self.dropout,
+                                    lstm_layers=self.lstm_layers).to(device)
 
-        self.decode = Decoder(embedding_dim = 2*self.embedding_dim,
-                              dropout = self.dropout,
-                              lstm_layers = lstm_layers).to(device)
-
-        self.output_layer = nn.Linear(in_features = 2*self.embedding_dim,
-                                      out_features = self.n_features)
+        self.decode = Decoder(embedding_dim=self.embedding_dim,
+                              hidden_dims=self.hidden_dims,
+                              output_dim=self.n_features,
+                              dropout=self.dropout,
+                              lstm_layers=self.lstm_layers).to(device)
 
     def sparsity_penalty(self, activations):
-        average_activation = th.mean(th.abs(activations), 0)
+        average_activation = th.mean(th.abs(activations), 1)
         target_activations = th.tensor([self.sparsity_parameter] * average_activation.shape[0]).to(self.device)
         kl_div_part1 = th.log(target_activations/average_activation)
         kl_div_part2 = th.log((1-target_activations)/(1-average_activation))
         return th.sum(self.sparsity_parameter * kl_div_part1 + (1-self.sparsity_parameter) * kl_div_part2)
 
-    def forward(self, comp0, comp1):
+    def forward(self, x):
 
-        unpacked_original0, seq_lengths0 = pad_packed_sequence(comp0, batch_first = True)
-        unpacked_original1, seq_lengths1 = pad_packed_sequence(comp1, batch_first = True)
+        comp0, comp1 = x
 
-        latent_vector0, activations0 = self.encode_comp0(comp0)
-        latent_vector1, activations1 = self.encode_comp1(comp1)
+        n_examples_comp0 = comp0.shape[1]
+        assert comp0.shape[2] == self.n_features
 
-        sparsity_loss = 0
-        unpacked_activations, _ = pad_packed_sequence(activations0, batch_first=True)
-        for i,activation_tensor in enumerate(unpacked_activations):
-            sparsity_loss += self.sparsity_penalty(activation_tensor[:seq_lengths0[i]])
+        n_examples_comp1 = comp1.shape[1]
+        assert comp1.shape[2] == self.n_features
 
-        unpacked_activations, _ = pad_packed_sequence(activations1, batch_first=True)
-        for i,activation_tensor in enumerate(unpacked_activations):
-            sparsity_loss += self.sparsity_penalty(activation_tensor[:seq_lengths1[i]])
+        total_n_examples = n_examples_comp0 - n_examples_comp1
 
-        sparsity_loss = self.sparsity_weight * sparsity_loss
+        latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
+        latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
 
-        seq_lengths_decoder = seq_lengths0 + seq_lengths1
-        max_seq_length = max(seq_lengths_decoder)
-        new_mini_batch = []
-        for i in range(latent_vector0.shape[0]):
-            tensor_comp0 = latent_vector0[i]
-            tensor_comp1 = latent_vector1[i]
-            tensor = th.cat((tensor_comp0, tensor_comp1))
-            padded_tensor = th.cat([tensor.repeat(seq_lengths_decoder[i], 1),
-                                    th.zeros(max_seq_length - seq_lengths_decoder[i],
-                                             2*self.embedding_dim).to(self.device)])
-            new_mini_batch.append(padded_tensor)
+        latent_vector = th.cat((latent_vector0, latent_vector1))
 
-        mini_batch_LV = th.stack(new_mini_batch).to(self.device)
+        stacked_LV = th.repeat_interleave(latent_vector, total_n_examples,
+                                          dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
+        reconstructed_x = self.decode(stacked_LV)
 
-        packed_LV = pack_padded_sequence(mini_batch_LV, seq_lengths_decoder, batch_first=True, enforce_sorted=False)
+        original_cycle = th.cat((comp0, comp1))
+        loss = F.mse_loss(reconstructed_x, original_cycle)
+        if self.training:
+            loss += self.sparsity_weight * (self.sparsity_penalty(hidden_outs0) + self.sparsity_penalty(hidden_outs1))
 
-        decoded_x = self.decode(packed_LV)
-
-        unpacked_decoded, _ = pad_packed_sequence(decoded_x, batch_first=True)
-
-        reconstructions = []
-        mse_loss = 0
-        for i, tensor in enumerate(unpacked_decoded):
-            linear_out = self.output_layer(tensor[:seq_lengths_decoder[i]])
-            original_cycle = th.cat((unpacked_original0[i, :seq_lengths0[i]], unpacked_original1[i, :seq_lengths1[i]]))
-            mse_loss += F.mse_loss(linear_out, original_cycle)
-            reconstructions.append(linear_out)
-
-        avg_mse_loss = mse_loss/seq_lengths_decoder.shape[0]
-        loss = avg_mse_loss + sparsity_loss if self.training else avg_mse_loss
-
-        return loss, reconstructions
+        return loss, reconstructed_x
