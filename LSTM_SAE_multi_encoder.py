@@ -129,7 +129,7 @@ class LSTM_SAE_MultiEncoder(nn.Module):
                                           dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
 
-        original_cycle = th.cat((comp0, comp1))
+        original_cycle = th.cat((comp0, comp1), dim=1)
         loss = F.mse_loss(reconstructed_x, original_cycle)
         if self.training:
             loss += self.sparsity_weight * (self.sparsity_penalty(hidden_outs0) + self.sparsity_penalty(hidden_outs1))

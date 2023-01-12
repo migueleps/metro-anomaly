@@ -119,7 +119,7 @@ class LSTM_AE_MultiEncoder(nn.Module):
                                           dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
 
-        original_cycle = th.cat((comp0, comp1))
+        original_cycle = th.cat((comp0, comp1), dim=1)
         loss = F.mse_loss(reconstructed_x, original_cycle)
 
         return loss, reconstructed_x
