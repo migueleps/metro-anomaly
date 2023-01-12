@@ -95,7 +95,7 @@ class LSTM_SAE_MultiEncoder(nn.Module):
                                     dropout=self.dropout,
                                     lstm_layers=self.lstm_layers).to(device)
 
-        self.decode = Decoder(embedding_dim=self.embedding_dim,
+        self.decode = Decoder(embedding_dim=2*self.embedding_dim,
                               hidden_dims=self.hidden_dims,
                               output_dim=self.n_features,
                               dropout=self.dropout,
@@ -123,10 +123,10 @@ class LSTM_SAE_MultiEncoder(nn.Module):
         latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
         latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
 
-        latent_vector = th.cat((latent_vector0, latent_vector1))
+        latent_vector = th.cat((latent_vector0, latent_vector1), dim=2)
 
         stacked_LV = th.repeat_interleave(latent_vector, total_n_examples,
-                                          dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
+                                          dim=1).reshape(-1, total_n_examples, 2*self.embedding_dim).to(self.device)
         reconstructed_x = self.decode(stacked_LV)
 
         original_cycle = th.cat((comp0, comp1), dim=1)
