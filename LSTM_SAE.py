@@ -34,7 +34,7 @@ class Encoder(nn.Module):
         #    x, (_, _) = lstm_cell(x)
         #    x = self.dropout(x)
         hidden_outs, (hidden, _) = self.lstm_layers(x)
-        return hidden, hidden_outs
+        return hidden[-1], hidden_outs
 
 
 class Decoder(nn.Module):
