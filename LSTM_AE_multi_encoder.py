@@ -95,7 +95,7 @@ class LSTM_AE_MultiEncoder(nn.Module):
         latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
         latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
 
-        latent_vector = th.cat((latent_vector0, latent_vector1), dim=2)
+        latent_vector = th.cat((latent_vector0, latent_vector1), dim=1)
 
         stacked_LV = th.repeat_interleave(latent_vector, total_n_examples,
                                           dim=1).reshape(-1, total_n_examples, 2*self.embedding_dim).to(self.device)
