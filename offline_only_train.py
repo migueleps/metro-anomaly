@@ -13,16 +13,6 @@ from EarlyStopper import EarlyStopping
 from ArgumentParser import parse_arguments
 
 
-def filter_tensors(list_of_cycles, cycle_indices, blacklist, args):
-    first_cycle, _ = cycle_indices  # last cycle is meant to not be included, the interval is [start,end)
-    tensor_list = []
-    for ind, cycle in enumerate(list_of_cycles):
-        if ind+first_cycle in blacklist:
-            continue
-        tensor_list.append(cycle.to(args.device))
-    return tensor_list
-
-
 def train_model(model,
                 train_tensors,
                 val_tensors,
@@ -83,19 +73,6 @@ def predict(model, test_tensors, tqdm_desc):
                 loss, _ = model(test_tensor)
                 test_losses.append(loss.item())
     return test_losses
-
-
-def extreme_anomaly(loop, args):
-    dist_window = args.train_losses[args.train_indices[loop]]
-    dist = dist_window[np.where(dist_window > -1)[0]]
-    q25, q75 = np.quantile(dist, [0.25, 0.75])
-    return q75 + 3*(q75-q25)
-
-
-def anomaly_indices(anomalies, test_indices):
-    i_first, i_last = test_indices
-    anom_indices = np.where(anomalies)[0]
-    return anom_indices + i_first
 
 
 def calculate_train_losses(model, args):
@@ -163,7 +140,7 @@ def offline_train(model, args):
     return model, train_losses
 
 
-def execute_online_loop(model, args):
+def calculate_test_losses(model, args):
 
     all_test_tensors = []
     if args.separate_comp:
@@ -204,24 +181,12 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    print_hidden = "_".join([f"{hidden}" for hidden in arguments.HIDDEN_DIMS])
-    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{print_hidden}"
+    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
 
     print(f"Starting execution of model: {arguments.model_string}")
 
-    arguments.blacklist = set()
-
-    arguments.results_string = lambda loop_no: f"{arguments.results_folder}online_{loop_no}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
-    arguments.model_saving_string = lambda loop_no: f"{arguments.results_folder}online_{loop_no}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
-
-    if arguments.INIT_LOOP > 0:
-        try:
-            with open(arguments.results_string(arguments.INIT_LOOP-1), "rb") as loss_file:
-                loss_over_time = pkl.load(loss_file)
-                arguments.blacklist = loss_over_time["blacklist"]
-        except FileNotFoundError:
-            print("Tried loading blacklist from previous results but failed, starting with empty blacklist.")
-            pass
+    arguments.results_string = lambda loop_no: f"{arguments.results_folder}{loop_no}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.model_saving_string = lambda loop_no: f"{arguments.results_folder}{loop_no}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
 
     with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
         arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
@@ -236,24 +201,19 @@ def main(arguments):
 
     model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
                                          arguments.EMBEDDING,
-                                         arguments.HIDDEN_DIMS,
                                          arguments.DROPOUT,
                                          arguments.LSTM_LAYERS,
                                          arguments.device,
                                          arguments.sparsity_weight,
                                          arguments.sparsity_parameter).to(arguments.device)
 
-    if arguments.INIT_LOOP == 0:
-        if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
-            model.load_state_dict(th.load(arguments.model_saving_string("offline")))
-            arguments.train_losses = calculate_train_losses(model, arguments)
-        else:
-            model, train_losses = offline_train(model, arguments)
-            arguments.train_losses = train_losses
+    if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
+        model.load_state_dict(th.load(arguments.model_saving_string("offline")))
+        arguments.train_losses = calculate_train_losses(model, arguments)
     else:
-        model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
+        model, arguments.train_losses = offline_train(model, arguments)
 
-    execute_online_loop(model, arguments)
+    calculate_test_losses(model, arguments)
 
 
 if __name__ == "__main__":

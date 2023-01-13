@@ -7,21 +7,11 @@ class Encoder(nn.Module):
 
     def __init__(self,
                  input_dim,
-                 hidden_dims,
                  embedding_dim,
                  dropout,
                  lstm_layers):
 
         super(Encoder, self).__init__()
-
-        #self.dropout = nn.Dropout(dropout)
-
-        #input_dims = [input_dim] + hidden_dims
-        #output_dims = hidden_dims + [embedding_dim]
-
-        #self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
-        #                                          hidden_size=output_dims[i],
-        #                                          batch_first=True) for i in range(lstm_layers)])
 
         self.lstm_layers = nn.LSTM(input_size=input_dim,
                                    hidden_size=embedding_dim,
@@ -30,9 +20,6 @@ class Encoder(nn.Module):
                                    dropout=dropout)
 
     def forward(self, x):
-        #for lstm_cell in self.lstm_layers[:-1]:
-        #    x, (_, _) = lstm_cell(x)
-        #    x = self.dropout(x)
         hidden_outs, (hidden, _) = self.lstm_layers(x)
         return hidden[-1], hidden_outs
 
@@ -41,20 +28,10 @@ class Decoder(nn.Module):
 
     def __init__(self,
                  embedding_dim,
-                 hidden_dims,
                  output_dim,
                  dropout,
                  lstm_layers):
         super(Decoder, self).__init__()
-
-        #self.dropout = nn.Dropout(dropout)
-
-        #input_dims = [embedding_dim, embedding_dim] + hidden_dims[:-1]
-        #output_dims = [embedding_dim] + hidden_dims
-
-        #self.lstm_layers = nn.ModuleList([nn.LSTM(input_size=input_dims[i],
-        #                                          hidden_size=output_dims[i],
-        #                                          batch_first=True) for i in range(lstm_layers)])
 
         self.lstm_layers = nn.LSTM(input_size=embedding_dim,
                                    hidden_size=embedding_dim,
@@ -66,9 +43,7 @@ class Decoder(nn.Module):
                                       out_features=output_dim)
 
     def forward(self, x):
-        #for lstm_cell in self.lstm_layers:
         x, (_, _) = self.lstm_layers(x)
-        #x = self.dropout(x)
         return self.output_layer(x)
 
 
@@ -77,7 +52,6 @@ class LSTM_SAE(nn.Module):
     def __init__(self,
                  n_features,
                  emb_dim,
-                 hidden_dims,
                  dropout,
                  lstm_layers,
                  device,
@@ -87,7 +61,6 @@ class LSTM_SAE(nn.Module):
         super(LSTM_SAE, self).__init__()
 
         self.embedding_dim = emb_dim
-        self.hidden_dims = hidden_dims
         self.dropout = dropout
         self.n_features = n_features
         self.device = device
@@ -96,13 +69,11 @@ class LSTM_SAE(nn.Module):
         self.sparsity_parameter = sparsity_parameter
 
         self.encode = Encoder(input_dim=self.n_features,
-                              hidden_dims=self.hidden_dims,
                               embedding_dim=self.embedding_dim,
                               dropout=self.dropout,
                               lstm_layers=self.lstm_layers).to(device)
 
         self.decode = Decoder(embedding_dim=self.embedding_dim,
-                              hidden_dims=self.hidden_dims,
                               output_dim=self.n_features,
                               dropout=self.dropout,
                               lstm_layers=self.lstm_layers).to(device)

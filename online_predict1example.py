@@ -138,10 +138,10 @@ def offline_train(model, args):
 
     train_losses = predict(model, train_tensors, "Calculating training error distribution")
 
-    with open(args.results_string("offline"), "wb") as loss_file:
+    with open(args.training_string, "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
-    th.save(model.state_dict(), args.model_saving_string("offline"))
+    th.save(model.state_dict(), args.model_saving_string)
 
     return model, train_losses
 
@@ -190,7 +190,7 @@ def execute_online_loop(model, args):
 
     losses_over_time = {"test": test_losses, "train": args.train_losses}
 
-    with open(args.results_string("complete"), "wb") as loss_file:
+    with open(args.results_string, "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
 
     return model
@@ -208,13 +208,13 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    print_hidden = "_".join([f"{hidden}" for hidden in arguments.HIDDEN_DIMS])
-    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{print_hidden}"
+    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
 
     print(f"Starting execution of model: {arguments.model_string}")
 
-    arguments.results_string = lambda loop_no: f"{arguments.results_folder}1example_{loop_no}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
-    arguments.model_saving_string = lambda loop_no: f"{arguments.results_folder}online_{loop_no}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
+    arguments.training_string = f"{arguments.results_folder}1example_offline_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.results_string = f"{arguments.results_folder}1example_complete_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.model_saving_string = f"{arguments.results_folder}offline_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
 
     with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
         arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
@@ -229,22 +229,18 @@ def main(arguments):
 
     model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
                                          arguments.EMBEDDING,
-                                         arguments.HIDDEN_DIMS,
                                          arguments.DROPOUT,
                                          arguments.LSTM_LAYERS,
                                          arguments.device,
                                          arguments.sparsity_weight,
                                          arguments.sparsity_parameter).to(arguments.device)
 
-    if arguments.INIT_LOOP == 0:
-        if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
-            model.load_state_dict(th.load(arguments.model_saving_string("offline")))
-            arguments.train_losses = calculate_train_losses(model, arguments)
-        else:
-            model, train_losses = offline_train(model, arguments)
-            arguments.train_losses = train_losses
+    if os.path.exists(arguments.model_saving_string) and not arguments.force_training:
+        model.load_state_dict(th.load(arguments.model_saving_string))
+        arguments.train_losses = calculate_train_losses(model, arguments)
     else:
-        model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
+        model, train_losses = offline_train(model, arguments)
+        arguments.train_losses = train_losses
 
     execute_online_loop(model, arguments)
 
