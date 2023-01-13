@@ -135,7 +135,7 @@ def offline_train(model, args):
     with open(args.results_string("offline"), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
-    th.save(model.state_dict(), args.model_saving_string("offline"))
+    th.save(model.state_dict(), args.model_saving_string)
 
     return model, train_losses
 
@@ -186,7 +186,7 @@ def load_parameters(arguments):
     print(f"Starting execution of model: {arguments.model_string}")
 
     arguments.results_string = lambda loop_no: f"{arguments.results_folder}{loop_no}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
-    arguments.model_saving_string = lambda loop_no: f"{arguments.results_folder}{loop_no}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
+    arguments.model_saving_string = f"{arguments.results_folder}offline_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
 
     with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
         arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
@@ -207,8 +207,8 @@ def main(arguments):
                                          arguments.sparsity_weight,
                                          arguments.sparsity_parameter).to(arguments.device)
 
-    if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
-        model.load_state_dict(th.load(arguments.model_saving_string("offline")))
+    if os.path.exists(arguments.model_saving_string) and not arguments.force_training:
+        model.load_state_dict(th.load(arguments.model_saving_string))
         arguments.train_losses = calculate_train_losses(model, arguments)
     else:
         model, arguments.train_losses = offline_train(model, arguments)
