@@ -165,7 +165,7 @@ def execute_online_loop(model, args):
                 test_tensors = pkl.load(tensor_pkl)
                 all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
 
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optimizer = optim.Adam(model.parameters(), lr=args.LR, weight_decay=args.weight_decay)
     losses_for_anomaly = deque(args.train_losses)
 
     test_losses = []
