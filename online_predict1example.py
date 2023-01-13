@@ -32,10 +32,7 @@ def train_model(model,
         val_losses = []
         with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
             for train_tensor in tqdm_epoch:
-                if epochs > 1:
-                    tqdm_epoch.set_description(f"Epoch {epoch+1}")
-                else:
-                    tqdm_epoch.set_description(f"Training on online data")
+                tqdm_epoch.set_description(f"Epoch {epoch+1}")
                 optimizer.zero_grad()
                 loss, _ = model(train_tensor)
                 loss.backward()
