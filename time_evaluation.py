@@ -12,21 +12,9 @@ def argument_parser():
     parser.add_argument("-minutes", dest="minutes", type=int, default=0)
     parser.add_argument("-days", dest="days", type=int, default=0)
     parser.add_argument("-file", dest="file", required=True)
-
+    parser.add_argument("-print_flag", dest="print_flag", action="store_true")
     args = parser.parse_args()
     return args
-
-
-def generate_cycles(df):
-    comp_change = list((t := df.COMP.diff().eq(-1))[t == True].index)
-    return [[comp_change[i], comp_change[i + 1]] for i in range(len(comp_change) - 1)]
-
-
-def match_cycles_to_dates(cycle):
-    cycle_start, cycle_end = cycle
-    cycle_start_date = metro.iloc[cycle_start, :].timestamp_day
-    cycle_end_date = metro.iloc[cycle_end, :].timestamp_day
-    return pd.Interval(cycle_start_date, cycle_end_date, closed="left")
 
 
 def generate_intervals(granularity):
@@ -146,9 +134,6 @@ def best_alpha(metric, metric_label, dictionary):
 
 
 if __name__ == "__main__":
-    metro = pd.read_csv("data/dataset_train.csv")
-    metro["timestamp"] = pd.to_datetime(metro["timestamp"], dayfirst=True)
-    metro["timestamp_day"] = metro.timestamp - pd.offsets.DateOffset(hours=2, seconds=1)
     air_leak1_dates = {"start": pd.to_datetime("28-02-2022 21:53:00",
                                                dayfirst=True) - pd.offsets.DateOffset(hours=2, seconds=1),
                        "end": pd.to_datetime("01-03-2022 02:00:00",
@@ -180,8 +165,8 @@ if __name__ == "__main__":
             pd.Interval(oil_leak_dates["start"] - pd.offsets.DateOffset(hours=2), oil_leak_dates["end"],
                         closed="both")]
 
-    all_cycles = generate_cycles(metro)[123:]
-    all_cycles_dates = list(map(lambda x: match_cycles_to_dates(x), all_cycles))
+    with open("data/all_cycles_dates.pkl", "rb") as cycle_dates:
+        all_cycles_dates = pkl.load(cycle_dates)
 
     alpha_range = np.append(np.arange(0.01, 0.1, 0.01), np.arange(0.1, 1, 0.1))
     argument_dict = argument_parser()
@@ -196,8 +181,8 @@ if __name__ == "__main__":
 
     complete_losses = np.append(train_losses, test_losses)
     average_loss_per_interval = np.array([np.mean(complete_losses[interval]) for interval in cycles_per_interval])
-    train_time = pd.Interval(metro.timestamp_day[0] + pd.offsets.DateOffset(days=2),
-                             metro.timestamp_day[0] + pd.offsets.DateOffset(months=1))
+    train_time = pd.Interval(pd.to_datetime('03-01-2022 03:59:59', dayfirst=True),
+                             pd.to_datetime('01-02-2022 03:59:59', dayfirst=True))
     train_intervals = np.where([interval.overlaps(train_time) for interval in all_intervals])[0]
     train_interval_losses = average_loss_per_interval[train_intervals]
     test_interval_losses = average_loss_per_interval[train_intervals[-1]+1:]
@@ -213,12 +198,13 @@ if __name__ == "__main__":
     for alpha in alpha_range:
         print(f"[Alpha: {alpha:.2f}]")
         d_both = output_metrics(output_lpf_binary[alpha], both, all_intervals[train_intervals[-1]+1:],
-                                print_label="Early and actual anomaly")
+                                print_label="Early and actual anomaly", print_flag=argument_dict.print_flag)
         dicts_both[alpha] = d_both
 
     for alpha in alpha_range:
         print(f"[Alpha: {alpha:.2f}]")
-        d_early = output_metrics(output_lpf_binary[alpha], early_detection, all_intervals[train_intervals[-1]+1:])
+        d_early = output_metrics(output_lpf_binary[alpha], early_detection, all_intervals[train_intervals[-1]+1:],
+                                 print_flag=argument_dict.print_flag)
         dicts_early[alpha] = d_early
 
     best_alpha("f1", "F1 - Early detection", dicts_early)
