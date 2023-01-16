@@ -137,7 +137,7 @@ def best_alpha_min(metric, metric_label, dictionary):
     best_metric, alpha_of_metric = 400, 0
     for alpha in alpha_range:
         value = dictionary[alpha][metric]
-        if value > best_metric:
+        if value < best_metric:
             best_metric = value
             alpha_of_metric = alpha
     print(f"Least {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
