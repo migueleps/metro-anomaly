@@ -223,9 +223,3 @@ if __name__ == "__main__":
 
     best_alpha("f1", "F1 - Early detection", dicts_early)
     best_alpha("f1", "F1 - Early and actual anomaly", dicts_both)
-    best_alpha("recall", "Recall - Early detection", dicts_early)
-    best_alpha("recall", "Recall - Early and actual anomaly", dicts_both)
-    best_alpha("precision", "Precision - Early detection", dicts_early)
-    best_alpha("precision", "Precision - Early and actual anomaly", dicts_both)
-    best_alpha_min("false_positives", "False positives - Early detection", dicts_early)
-    best_alpha_min("false_positives", "False positives - Early and actual anomaly", dicts_both)
