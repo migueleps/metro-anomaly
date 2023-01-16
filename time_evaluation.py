@@ -24,7 +24,7 @@ def generate_intervals(granularity):
     current_timestamp = first_timestamp
     interval_length = pd.offsets.DateOffset(**granularity)
     interval_list = []
-    while current_timestamp <= last_timestamp:
+    while current_timestamp < last_timestamp:
         interval_list.append(pd.Interval(current_timestamp, current_timestamp + interval_length, closed="left"))
         current_timestamp = current_timestamp + interval_length
     return interval_list
@@ -196,13 +196,15 @@ if __name__ == "__main__":
     dicts_both = {}
 
     for alpha in alpha_range:
-        print(f"[Alpha: {alpha:.2f}]")
+        if argument_dict.print_flag:
+            print(f"[Alpha: {alpha:.2f}]")
         d_both = output_metrics(output_lpf_binary[alpha], both, all_intervals[train_intervals[-1]+1:],
                                 print_label="Early and actual anomaly", print_flag=argument_dict.print_flag)
         dicts_both[alpha] = d_both
 
     for alpha in alpha_range:
-        print(f"[Alpha: {alpha:.2f}]")
+        if argument_dict.print_flag:
+            print(f"[Alpha: {alpha:.2f}]")
         d_early = output_metrics(output_lpf_binary[alpha], early_detection, all_intervals[train_intervals[-1]+1:],
                                  print_flag=argument_dict.print_flag)
         dicts_early[alpha] = d_early
