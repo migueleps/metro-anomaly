@@ -132,7 +132,7 @@ def best_alpha(metric, metric_label, dictionary):
             alpha_of_metric = alpha
     print(f"Best {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
     if metric == "f1":
-        print(f"Achieved with precision of {dictionary[alpha]['precision']} and recall of {dictionary[alpha]['recall']}")
+        print(f"Achieved with precision of {dictionary[alpha_of_metric]['precision']} and recall of {dictionary[alpha_of_metric]['recall']}")
 
 
 def best_alpha_min(metric, metric_label, dictionary):
