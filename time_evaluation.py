@@ -29,9 +29,10 @@ def match_cycles_to_dates(cycle):
     return pd.Interval(cycle_start_date, cycle_end_date, closed="left")
 
 
-def generate_intervals(df, granularity):
-    first_timestamp = df.iloc[0].timestamp_day
-    last_timestamp = df.iloc[-1].timestamp_day
+def generate_intervals(granularity):
+    first_timestamp = pd.to_datetime("03-01-2022 04:00:00",
+                                     dayfirst=True)
+    last_timestamp = pd.to_datetime("02-06-2022 14:00:00", dayfirst=True)
     current_timestamp = first_timestamp
     interval_length = pd.offsets.DateOffset(**granularity)
     interval_list = []
