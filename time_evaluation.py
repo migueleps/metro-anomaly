@@ -124,7 +124,7 @@ Recall: {rec(metrics):.3f}\nF1: {f1(metrics):.3f}\nNumber of predicted failures:
 
 
 def best_alpha(metric, metric_label, dictionary):
-    best_metric, alpha_of_metric = 0, 0
+    best_metric, alpha_of_metric = 0, 0.01
     for alpha in alpha_range:
         value = dictionary[alpha][metric]
         if value > best_metric:
