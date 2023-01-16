@@ -133,6 +133,16 @@ def best_alpha(metric, metric_label, dictionary):
     print(f"Best {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
 
 
+def best_alpha_min(metric, metric_label, dictionary):
+    best_metric, alpha_of_metric = 400, 0
+    for alpha in alpha_range:
+        value = dictionary[alpha][metric]
+        if value > best_metric:
+            best_metric = value
+            alpha_of_metric = alpha
+    print(f"Least {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
+
+
 if __name__ == "__main__":
     air_leak1_dates = {"start": pd.to_datetime("28-02-2022 21:53:00",
                                                dayfirst=True) - pd.offsets.DateOffset(hours=2, seconds=1),
@@ -213,3 +223,7 @@ if __name__ == "__main__":
     best_alpha("f1", "F1 - Early and actual anomaly", dicts_both)
     best_alpha("recall", "Recall - Early detection", dicts_early)
     best_alpha("recall", "Recall - Early and actual anomaly", dicts_both)
+    best_alpha("precision", "Precision - Early detection", dicts_early)
+    best_alpha("precision", "Precision - Early and actual anomaly", dicts_both)
+    best_alpha_min("false_positives", "False positives - Early detection", dicts_early)
+    best_alpha_min("false_positives", "False positives - Early and actual anomaly", dicts_both)
