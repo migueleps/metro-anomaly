@@ -102,15 +102,13 @@ class LSTM_SAE_MultiComp(nn.Module):
         n_examples_comp1 = comp1.shape[1]
         assert comp1.shape[2] == self.n_features
 
-        total_n_examples = n_examples_comp0 + n_examples_comp1
-
         latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
         latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
 
-        stacked_LV0 = th.repeat_interleave(latent_vector0, total_n_examples,
-                                           dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
-        stacked_LV1 = th.repeat_interleave(latent_vector1, total_n_examples,
-                                           dim=1).reshape(-1, total_n_examples, self.embedding_dim).to(self.device)
+        stacked_LV0 = th.repeat_interleave(latent_vector0, n_examples_comp0,
+                                           dim=1).reshape(-1, n_examples_comp0, self.embedding_dim).to(self.device)
+        stacked_LV1 = th.repeat_interleave(latent_vector1, n_examples_comp1,
+                                           dim=1).reshape(-1, n_examples_comp1, self.embedding_dim).to(self.device)
 
         reconstructed_comp0 = self.decode_comp0(stacked_LV0)
         reconstructed_comp1 = self.decode_comp1(stacked_LV1)
