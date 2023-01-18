@@ -8,6 +8,8 @@ from LSTM_SAE import LSTM_SAE
 from LSTM_AllLayerSAE import LSTM_AllLayerSAE
 from LSTM_SAE_multi_encoder import LSTM_SAE_MultiEncoder
 from LSTM_AE_multi_encoder import LSTM_AE_MultiEncoder
+from LSTM_AE_diff_comp import LSTM_AE_MultiComp
+from LSTM_SAE_diff_comp import LSTM_SAE_MultiComp
 import tqdm
 from EarlyStopper import EarlyStopping
 from ArgumentParser import parse_arguments
@@ -194,7 +196,8 @@ def load_parameters(arguments):
 def main(arguments):
 
     MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE, "lstm_all_layer_sae": LSTM_AllLayerSAE,
-              "multi_enc_sae": LSTM_SAE_MultiEncoder, "multi_enc_ae": LSTM_AE_MultiEncoder}
+              "multi_enc_sae": LSTM_SAE_MultiEncoder, "multi_enc_ae": LSTM_AE_MultiEncoder,
+              "diff_comp_sae": LSTM_SAE_MultiComp, "diff_comp_ae": LSTM_AE_MultiComp}
 
     model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
                                          arguments.EMBEDDING,
