@@ -4,9 +4,15 @@ from torch import nn, optim
 import pickle as pkl
 from LSTMAE import LSTM_AE
 from LSTM_SAE import LSTM_SAE
+from LSTM_AllLayerSAE import LSTM_AllLayerSAE
+from LSTM_SAE_multi_encoder import LSTM_SAE_MultiEncoder
+from LSTM_AE_multi_encoder import LSTM_AE_MultiEncoder
+from LSTM_AE_diff_comp import LSTM_AE_MultiComp
+from LSTM_SAE_diff_comp import LSTM_SAE_MultiComp
 import tqdm
-from types import SimpleNamespace
 from EarlyStopper import EarlyStopping
+from ArgumentParser import parse_arguments
+import os
 
 
 def filter_tensors(list_of_cycles, cycle_indices, blacklist, args):
@@ -28,7 +34,7 @@ def train_model(model,
 
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=args.weight_decay)
     loss_over_time = {"train": [], "val": []}
-    early_stopper = EarlyStopping(args.succesive_iters,
+    early_stopper = EarlyStopping(args.successive_iters,
                                   args.delta_worse,
                                   args.delta_better)
     for epoch in range(epochs):
@@ -62,7 +68,8 @@ def train_model(model,
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
 
-        if early_stopper.stopping_condition(val_loss):
+        if epoch > 100 and early_stopper.stopping_condition(val_loss):
+            early_stopper.print_stop_reason()
             break
 
     return model, loss_over_time
@@ -93,6 +100,26 @@ def anomaly_indices(anomalies, test_indices):
     return anom_indices + i_first
 
 
+def calculate_train_losses(model, args):
+
+    if args.separate_comp:
+        with open(f"{args.data_folder}train_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp0 = pkl.load(tensor_pkl)
+        with open(f"{args.data_folder}train_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors_comp1 = pkl.load(tensor_pkl)
+        train_tensors = [[train_tensors_comp0[i].to(args.device),
+                          train_tensors_comp1[i].to(args.device)] for i in range(len(train_tensors_comp0))]
+
+    else:
+        with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            train_tensors = pkl.load(tensor_pkl)
+            train_tensors = [tensor.to(args.device) for tensor in train_tensors]
+
+    train_losses = predict(model, train_tensors, "Calculating training error distribution")
+
+    return np.array([-1]*(args.val_inds[1]-args.val_indices[0]) + train_losses)
+
+
 def offline_train(model, args):
 
     print(f"Starting offline training")
@@ -114,7 +141,7 @@ def offline_train(model, args):
 
     train_losses = predict(model, train_tensors, "Calculating training error distribution")
 
-    with open(args.offline_results_string, "wb") as loss_file:
+    with open(args.results_string("offline"), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
     th.save(model.state_dict(), args.model_saving_string("offline"))
@@ -154,92 +181,63 @@ def execute_online_loop(loop_no, model, args):
     with open(args.results_string(loop_no), "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
 
-    th.save(model.state_dict(), args.model_saving_string(loop_no))
+    th.save(model.state_dict(), args.model_saving_string(f"online_{loop_no}"))
 
     return model
 
 
-def load_parameters():
+def load_parameters(arguments):
 
     FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
 
-    args = SimpleNamespace()
+    arguments.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
-    args.INIT_LOOP = 0
-    args.END_LOOP = 17
+    arguments.FEATS = f"{arguments.FEATS}_feats"
+    arguments.NUMBER_FEATURES = FEATS_TO_NUMBER[arguments.FEATS]
 
-    args.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
+    arguments.results_folder = "results/"
+    arguments.data_folder = "data/"
 
-    args.MODEL_NAME = "lstm_ae"
+    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
 
-    args.EPOCHS = 1000
-    args.LR = 1e-3
-    args.weight_decay = 0 if args.MODEL_NAME == "lstm_ae" else 1e-3
+    print(f"Starting execution of model: {arguments.model_string}")
 
-    args.succesive_iters = 10
-    args.delta_worse = 0.05
-    args.delta_better = 0.005
+    arguments.training_string = f"{arguments.results_folder}online_offline_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.results_string = lambda loop: f"{arguments.results_folder}online_{loop}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.model_saving_string = lambda loop: f"{arguments.results_folder}{loop}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
 
-    args.DROPOUT = 0.2
-    args.EMBEDDING = 6
-    args.LSTM_LAYERS = 3
-    args.HIDDEN_DIMS = [16, 8]
+    with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
+        arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
 
-    args.sparsity_weight = 1
-    args.sparsity_parameter = 0.05
-
-    args.FEATS = "analog_feats"
-    args.NUMBER_FEATURES = FEATS_TO_NUMBER[args.FEATS]
-
-    args.results_folder = "results/"
-    args.data_folder = "data/"
-
-    args.model_string = f"{args.MODEL_NAME}_{args.FEATS}_{args.EMBEDDING}"
-
-    args.blacklist = set()
-
-    args.results_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_losses_{args.model_string}_{args.EPOCHS}_{args.LR}.pkl"
-    args.model_saving_string = lambda loop_no: f"{args.results_folder}online_{loop_no}_{args.model_string}_{args.EPOCHS}_{args.LR}.pt"
-    args.offline_results_string = f"{args.results_folder}online_offline_losses_{args.model_string}_{args.EPOCHS}_{args.LR}.pkl"
-
-    if args.INIT_LOOP > 0:
-        try:
-            with open(args.results_string(args.INIT_LOOP-1), "rb") as loss_file:
-                loss_over_time = pkl.load(loss_file)
-                args.blacklist = loss_over_time["blacklist"]
-        except FileNotFoundError:
-            print("Tried loading blacklist from previous results but failed, starting with empty blacklist.")
-            pass
-
-    with open(f"{args.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
-        args.train_indices, args.val_indices, args.test_indices = pkl.load(indices_pkl)
-
-    return args
+    return arguments
 
 
 def main(arguments):
 
-    MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE}
+    MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE, "lstm_all_layer_sae": LSTM_AllLayerSAE,
+              "multi_enc_sae": LSTM_SAE_MultiEncoder, "multi_enc_ae": LSTM_AE_MultiEncoder,
+              "diff_comp_sae": LSTM_SAE_MultiComp, "diff_comp_ae": LSTM_AE_MultiComp}
 
     model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
                                          arguments.EMBEDDING,
-                                         arguments.HIDDEN_DIMS,
                                          arguments.DROPOUT,
                                          arguments.LSTM_LAYERS,
                                          arguments.device,
                                          arguments.sparsity_weight,
                                          arguments.sparsity_parameter).to(arguments.device)
 
-    if arguments.INIT_LOOP == 0:
+    if os.path.exists(arguments.model_saving_string("offline")) and not arguments.force_training:
+        model.load_state_dict(th.load(arguments.model_saving_string("offline")))
+        arguments.train_losses = calculate_train_losses(model, arguments)
+    else:
         model, train_losses = offline_train(model, arguments)
         arguments.train_losses = train_losses
-    else:
-        model.load_state_dict(th.load(arguments.model_saving_string(arguments.INIT_LOOP-1)))
 
     for loop in range(arguments.INIT_LOOP, arguments.END_LOOP+1):
         model = execute_online_loop(loop, model, arguments)
 
 
 if __name__ == "__main__":
-    argument_dict = load_parameters()
+    argument_dict = parse_arguments()
+    argument_dict = load_parameters(argument_dict)
     main(argument_dict)
