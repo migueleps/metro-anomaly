@@ -13,6 +13,7 @@ def argument_parser():
     parser.add_argument("-days", dest="days", type=int, default=0)
     parser.add_argument("-file", dest="file", required=True)
     parser.add_argument("-print_flag", dest="print_flag", action="store_true")
+    parser.add_argument("-early", dest="early_detection", action="store_true")
     args = parser.parse_args()
     return args
 
@@ -204,22 +205,15 @@ if __name__ == "__main__":
     output_lpf_binary = {alpha: np.array(np.array(simple_lowpass_filter(binary_output, alpha)) > 0.5, dtype=int)
                          for alpha in alpha_range}
 
-    dicts_early = {}
-    dicts_both = {}
+    dicts = {}
+    ground_truth = early_detection if argument_dict.early_detection else both
+    label = "Early detection" if argument_dict.early_detection else "Detecting both"
 
     for alpha in alpha_range:
         if argument_dict.print_flag:
             print(f"[Alpha: {alpha:.2f}]")
-        d_both = output_metrics(output_lpf_binary[alpha], both, all_intervals[train_intervals[-1]+1:],
-                                print_label="Early and actual anomaly", print_flag=argument_dict.print_flag)
-        dicts_both[alpha] = d_both
+        d = output_metrics(output_lpf_binary[alpha], ground_truth, all_intervals[train_intervals[-1]+1:],
+                           print_flag=argument_dict.print_flag, print_label=label)
+        dicts[alpha] = d
 
-    for alpha in alpha_range:
-        if argument_dict.print_flag:
-            print(f"[Alpha: {alpha:.2f}]")
-        d_early = output_metrics(output_lpf_binary[alpha], early_detection, all_intervals[train_intervals[-1]+1:],
-                                 print_flag=argument_dict.print_flag)
-        dicts_early[alpha] = d_early
-
-    best_alpha("f1", "F1 - Early detection", dicts_early)
-    best_alpha("f1", "F1 - Early and actual anomaly", dicts_both)
+    best_alpha("f1", f"F1 - {label}", dicts)
