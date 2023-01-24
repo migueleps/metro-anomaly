@@ -124,16 +124,18 @@ Recall: {rec(metrics):.3f}\nF1: {f1(metrics):.3f}\nNumber of predicted failures:
                 false_negatives=metrics['fn'])
 
 
-def best_alpha(metric, metric_label, dictionary):
+def best_alpha(metric, metric_label, dictionary, print_flag):
     best_metric, alpha_of_metric = 0, 0.01
     for alpha in alpha_range:
         value = dictionary[alpha][metric]
         if value > best_metric:
             best_metric = value
             alpha_of_metric = alpha
-    print(f"Best {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
-    if metric == "f1":
+    if print_flag:
+        print(f"Best {metric_label} was {best_metric:.3f} with alpha = {alpha_of_metric:.2f}")
         print(f"Achieved with precision of {dictionary[alpha_of_metric]['precision']} and recall of {dictionary[alpha_of_metric]['recall']}")
+    else:
+        print(best_metric)
 
 
 def best_alpha_min(metric, metric_label, dictionary):
@@ -216,4 +218,4 @@ if __name__ == "__main__":
                            print_flag=argument_dict.print_flag, print_label=label)
         dicts[alpha] = d
 
-    best_alpha("f1", f"F1 - {label}", dicts)
+    best_alpha("f1", f"F1 - {label}", dicts, argument_dict.print_flag)
