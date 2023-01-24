@@ -117,7 +117,7 @@ def calculate_train_losses(model, args):
 
     train_losses = predict(model, train_tensors, "Calculating training error distribution")
 
-    return np.array([-1]*(args.val_inds[1]-args.val_indices[0]) + train_losses)
+    return np.array([-1]*(args.val_indices[1]-args.val_indices[0]) + train_losses)
 
 
 def offline_train(model, args):
