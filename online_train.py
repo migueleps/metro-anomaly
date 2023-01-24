@@ -218,6 +218,7 @@ def load_parameters(arguments):
     with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
         arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
 
+    arguments.train_indices = list(map(lambda x: [x[0], x[1]-1], arguments.train_indices))
     return arguments
 
 
