@@ -152,19 +152,28 @@ def offline_train(model, args):
 def execute_online_loop(loop_no, model, args):
 
     print(f"Starting online loop {loop_no+1}")
+    if args.separate_comp:
+        t = []
+        with open(f"{args.data_folder}test_tensors_comp0_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            test_tensors = pkl.load(tensor_pkl)
+            t.append(test_tensors)
+        with open(f"{args.data_folder}test_tensors_comp1_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            test_tensors = pkl.load(tensor_pkl)
+            t.append(test_tensors)
+        all_test_tensors = [[t[0][i].to(args.device), t[1][i].to(args.device)] for i in range(len(t[0]))]
+    else:
+        with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            test_tensors = pkl.load(tensor_pkl)
+            all_test_tensors = [tensor.to(args.device) for tensor in test_tensors]
 
-    with open(f"{args.data_folder}test_tensors_{loop_no}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-        test_tensors = pkl.load(tensor_pkl)
-        test_tensors = [tensor.to(args.device) for tensor in test_tensors]
-
-    test_losses = predict(model, test_tensors, "Testing on new data")
+    test_losses = predict(model, all_test_tensors, "Testing on new data")
 
     anomaly_threshold = extreme_anomaly(loop_no, args)
     anomalies = np.array(test_losses) > anomaly_threshold
     detected_anomalies = anomaly_indices(anomalies, args.test_indices[loop_no])
     args.blacklist.update(detected_anomalies)
 
-    train_tensors = filter_tensors(test_tensors, args.test_indices[loop_no], args.blacklist, args)
+    train_tensors = filter_tensors(all_test_tensors, args.test_indices[loop_no], args.blacklist, args)
     model, _ = train_model(model,
                            train_tensors,
                            [],
@@ -172,7 +181,7 @@ def execute_online_loop(loop_no, model, args):
                            lr=args.LR,
                            args=args)
 
-    train_losses = predict(model, test_tensors, "Calculating new training error distribution")
+    train_losses = predict(model, all_test_tensors, "Calculating new training error distribution")
     args.train_losses = np.append(args.train_losses, train_losses)
     args.train_losses[detected_anomalies] = -1
 
