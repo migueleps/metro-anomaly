@@ -21,7 +21,7 @@ def filter_tensors(list_of_cycles, cycle_indices, blacklist, args):
     for ind, cycle in enumerate(list_of_cycles):
         if ind+first_cycle in blacklist:
             continue
-        tensor_list.append(cycle.to(args.device))
+        tensor_list.append(cycle)
     return tensor_list
 
 
@@ -185,7 +185,8 @@ def execute_online_loop(loop_no, model, args):
     args.train_losses = np.append(args.train_losses, train_losses)
     args.train_losses[detected_anomalies] = -1
 
-    losses_over_time = {"test": test_losses, "blacklist": args.blacklist}
+    losses_over_time = {"test": test_losses, "blacklist": args.blacklist,
+                        "train": args.train_losses[args.train_indices[loop_no]]}
 
     with open(args.results_string(loop_no), "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
