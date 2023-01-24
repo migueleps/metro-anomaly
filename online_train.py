@@ -211,6 +211,7 @@ def load_parameters(arguments):
 
     print(f"Starting execution of model: {arguments.model_string}")
 
+    arguments.blacklist = set()
     arguments.training_string = f"{arguments.results_folder}online_offline_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
     arguments.results_string = lambda loop: f"{arguments.results_folder}online_{loop}_losses_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
     arguments.model_saving_string = lambda loop: f"{arguments.results_folder}{loop}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pt"
