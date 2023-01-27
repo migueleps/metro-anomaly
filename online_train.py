@@ -87,8 +87,7 @@ def predict(model, test_tensors, tqdm_desc):
     return test_losses
 
 
-def extreme_anomaly(dist_window):
-    dist = dist_window[np.where(dist_window > -1)[0]]
+def extreme_anomaly(dist):
     q25, q75 = np.quantile(dist, [0.25, 0.75])
     return q75 + 3*(q75-q25)
 
@@ -116,7 +115,7 @@ def calculate_train_losses(model, args):
 
     train_losses = predict(model, train_tensors, "Calculating training error distribution")
 
-    return np.array([-1]*(args.val_indices[1]-args.val_indices[0]) + train_losses)
+    return train_losses
 
 
 def offline_train(model, args):
@@ -145,7 +144,7 @@ def offline_train(model, args):
 
     th.save(model.state_dict(), args.model_saving_string("offline"))
 
-    return model, np.array([-1]*len(val_tensors) + train_losses)
+    return model, train_losses
 
 
 def execute_online_loop(loop_no, model, args):
@@ -180,12 +179,11 @@ def execute_online_loop(loop_no, model, args):
                            lr=args.LR,
                            args=args)
 
-    train_losses = predict(model, all_test_tensors, "Calculating new training error distribution")
+    train_losses = predict(model, train_tensors, "Calculating new training error distribution")
     args.train_losses = np.append(args.train_losses, train_losses)
-    args.train_losses[detected_anomalies] = -1
 
     losses_over_time = {"test": test_losses, "blacklist": args.blacklist,
-                        "train": args.train_losses[args.train_indices[loop_no]]}
+                        "train": args.train_losses}
 
     with open(args.results_string(loop_no), "wb") as loss_file:
         pkl.dump(losses_over_time, loss_file)
