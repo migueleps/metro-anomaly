@@ -87,8 +87,7 @@ def predict(model, test_tensors, tqdm_desc):
     return test_losses
 
 
-def extreme_anomaly(loop, args):
-    dist_window = args.train_losses[args.train_indices[loop]]
+def extreme_anomaly(dist_window):
     dist = dist_window[np.where(dist_window > -1)[0]]
     q25, q75 = np.quantile(dist, [0.25, 0.75])
     return q75 + 3*(q75-q25)
@@ -168,7 +167,7 @@ def execute_online_loop(loop_no, model, args):
 
     test_losses = predict(model, all_test_tensors, "Testing on new data")
 
-    anomaly_threshold = extreme_anomaly(loop_no, args)
+    anomaly_threshold = extreme_anomaly(args.train_losses)
     anomalies = np.array(test_losses) > anomaly_threshold
     detected_anomalies = anomaly_indices(anomalies, args.test_indices[loop_no])
     args.blacklist.update(detected_anomalies)
