@@ -42,7 +42,7 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
     return loss.item()
 
 
-def train_critic_encoder(critic, encoder, optimizer, train_tensor, random_latent_space, args):
+def train_critic_encoder(optimizer, train_tensor, random_latent_space, args):
     optimizer.zero_grad()
     latent_space = args.encoder(train_tensor)
     critic_real_latent = args.critic_encoder(latent_space)
@@ -94,7 +94,7 @@ def train_model(train_tensors,
             critic_decoder_losses = []
             with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
                 for train_tensor in tqdm_epoch:
-                    tqdm_epoch.set_description(f"Critic iteration {critic_iter + 1}")
+                    tqdm_epoch.set_description(f"Critics iteration {critic_iter + 1}")
                     random_latent_space = multivariate_normal.sample(train_tensor.shape[:2])
 
                     critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
