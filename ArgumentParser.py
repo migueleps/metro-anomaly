@@ -21,6 +21,9 @@ def parse_arguments():
     parser.add_argument("-sp", dest="sparsity_parameter", type=float, default=0.05,
                         help="Sparsity parameter for Sparse AE")
 
+    parser.add_argument("-att_heads", dest="NHEADS", type=int, default=8,
+                        help="Number of attention heads")
+
     parser.add_argument("-feats", dest="FEATS", choices=["analog", "digital", "all"], default="analog",
                         help="Which sensors to use")
 
@@ -31,6 +34,8 @@ def parse_arguments():
     parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
                                                               "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae"],
                         required=True)
+
+    parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")
 
     parser.add_argument("-separate_comp", dest="separate_comp", action="store_true")
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
