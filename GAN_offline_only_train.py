@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.distributions.multivariate_normal import MultivariateNormal
 import pickle as pkl
 import tqdm
-from torch.autograd import grad
+from torch.autograd import Variable
 from ArgumentParser import parse_arguments
 from LSTM_GAN import Encoder, Decoder, CriticDecoder, CriticEncoder
 import dtw
@@ -23,19 +23,40 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
 
     # gradient penalty regularization
 
+    #random_weight_average_parameter = th.rand(train_tensor.shape).to(args.device)
+    #interpolates = random_weight_average_parameter * train_tensor + (
+    #            1 - random_weight_average_parameter) * reconstructed_random_latent
+    #interpolates = interpolates.to(args.device)
+    #interpolates_critic = args.critic_decoder(interpolates)
+
+    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
+    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
+    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
+
+    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
+
+    #loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
+
     random_weight_average_parameter = th.rand(train_tensor.shape).to(args.device)
-    interpolates = random_weight_average_parameter * train_tensor + (
-                1 - random_weight_average_parameter) * reconstructed_random_latent
-    interpolates = interpolates.to(args.device)
+    interpolates = Variable(random_weight_average_parameter * train_tensor +
+                            (1 - random_weight_average_parameter) * reconstructed_random_latent)
+    interpolates.requires_grad_(True)
     interpolates_critic = args.critic_decoder(interpolates)
+    interpolates_critic.mean().backward()
+    gradients = interpolates.grad
+    gp_loss = th.sqrt(th.sum(th.square(gradients).view(-1)))
+    #interpolates = random_weight_average_parameter * latent_space + (
+    #            1 - random_weight_average_parameter) * random_latent_space
+    #interpolates = interpolates.to(args.device)
+    #interpolates_critic = args.critic_encoder(interpolates)
 
-    gradients = grad(outputs=interpolates_critic, inputs=interpolates,
-                     grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
-                     create_graph=True, retain_graph=True, only_inputs=True)[0]
+    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
+    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
+    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
+    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
-    loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
+    loss = gp_loss + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
     optimizer.step()
 
@@ -54,18 +75,25 @@ def train_critic_encoder(optimizer, train_tensor, random_latent_space, args):
     # gradient penalty regularization
 
     random_weight_average_parameter = th.rand(latent_space.shape).to(args.device)
-    interpolates = random_weight_average_parameter * latent_space + (
-                1 - random_weight_average_parameter) * random_latent_space
-    interpolates = interpolates.to(args.device)
+    interpolates = Variable(random_weight_average_parameter * latent_space +
+                  (1 - random_weight_average_parameter) * random_latent_space)
+    interpolates.requires_grad_(True)
     interpolates_critic = args.critic_encoder(interpolates)
+    interpolates_critic.mean().backward()
+    gradients = interpolates.grad
+    gp_loss = th.sqrt(th.sum(th.square(gradients).view(-1)))
+    #interpolates = random_weight_average_parameter * latent_space + (
+    #            1 - random_weight_average_parameter) * random_latent_space
+    #interpolates = interpolates.to(args.device)
+    #interpolates_critic = args.critic_encoder(interpolates)
 
-    gradients = grad(outputs=interpolates_critic, inputs=interpolates,
-                     grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
-                     create_graph=True, retain_graph=True, only_inputs=True)[0]
+    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
+    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
+    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
 
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
+    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
-    loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
+    loss = gp_loss + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
     optimizer.step()
 
@@ -96,13 +124,12 @@ def train_model(train_tensors,
                 for train_tensor in tqdm_epoch:
                     tqdm_epoch.set_description(f"Critics iteration {critic_iter + 1}")
                     random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
-                    with th.backends.cudnn.flags(enabled=False):
-                        critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
+                    critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
                                                                       train_tensor,
                                                                       random_latent_space,
                                                                       args))
 
-                        critic_decoder_losses.append(train_critic_decoder(optimizer_critic_decoder,
+                    critic_decoder_losses.append(train_critic_decoder(optimizer_critic_decoder,
                                                                       train_tensor,
                                                                       random_latent_space,
                                                                       args))
