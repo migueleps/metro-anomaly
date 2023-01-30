@@ -133,7 +133,7 @@ def train_model(train_tensors,
                 loss_encoder = wl_random_critic_encoder + wl_real_critic_encoder + mse_loss
                 loss_decoder = wl_real_critic_decoder + wl_random_critic_decoder + mse_loss
 
-                loss_decoder.backward(retrain_graph=True)
+                loss_decoder.backward(retain_graph=True)
                 loss_encoder.backward()
                 optimizer_decoder.step()
                 optimizer_encoder.step()
