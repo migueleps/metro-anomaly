@@ -87,7 +87,7 @@ def train_model(train_tensors,
             with tqdm.tqdm(critic_tensors, unit="cycles") as tqdm_epoch:
                 for critic_tensor in tqdm_epoch:
                     tqdm_epoch.set_description(f"Critics iteration {critic_iter + 1}")
-                    random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
+                    random_latent_space = multivariate_normal.sample(critic_tensor.shape[:2]).to(args.device)
                     critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
                                                                       critic_tensor,
                                                                       random_latent_space,
