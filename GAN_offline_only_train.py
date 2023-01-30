@@ -109,7 +109,7 @@ def train_model(train_tensors,
                 optimizer_encoder.zero_grad()
                 optimizer_decoder.zero_grad()
 
-                random_latent_space = multivariate_normal.sample(train_tensor.shape[:2])
+                random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
                 latent_space = args.encoder(train_tensor)
                 reconstructed_tensor = args.decoder(latent_space)
 
