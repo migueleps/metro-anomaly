@@ -279,9 +279,9 @@ def load_parameters(arguments):
 
     arguments.model_string = lambda model: f"{model}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
 
-    print(f"Starting execution of model: {arguments.model_string}")
+    print(f"Starting execution of model: {arguments.model_string('GAN')}")
 
-    arguments.results_string = lambda loop_no, reconstruction: f"{arguments.results_folder}{loop_no}_losses_{reconstruction}_{arguments.model_string}_{arguments.EPOCHS}_{arguments.LR}.pkl"
+    arguments.results_string = lambda loop_no, reconstruction: f"{arguments.results_folder}{loop_no}_losses_{reconstruction}_{arguments.model_string('GAN')}_{arguments.EPOCHS}_{arguments.LR}.pkl"
     arguments.model_saving_string = lambda model: f"{arguments.results_folder}offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}.pt"
 
     with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
