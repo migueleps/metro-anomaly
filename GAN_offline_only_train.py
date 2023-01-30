@@ -80,7 +80,7 @@ def train_model(train_tensors,
 
     for epoch in range(epochs):
 
-        critic_tensors = np.array(train_tensors)[np.random.randint(len(train_tensors), size=args.BATCH_SIZE)]
+        critic_tensors = [train_tensors[i] for i in np.random.randint(len(train_tensors), size=args.BATCH_SIZE)]
         for critic_iter in range(args.critic_iterations):
             critic_encoder_losses = []
             critic_decoder_losses = []
