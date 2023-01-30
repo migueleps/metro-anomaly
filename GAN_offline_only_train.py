@@ -96,13 +96,13 @@ def train_model(train_tensors,
                 for train_tensor in tqdm_epoch:
                     tqdm_epoch.set_description(f"Critics iteration {critic_iter + 1}")
                     random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
-
-                    critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
+                    with th.backends.cudnn.flags(enabled=False):
+                        critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
                                                                       train_tensor,
                                                                       random_latent_space,
                                                                       args))
 
-                    critic_decoder_losses.append(train_critic_decoder(optimizer_critic_decoder,
+                        critic_decoder_losses.append(train_critic_decoder(optimizer_critic_decoder,
                                                                       train_tensor,
                                                                       random_latent_space,
                                                                       args))
