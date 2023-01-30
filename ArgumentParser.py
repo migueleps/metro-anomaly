@@ -32,7 +32,8 @@ def parse_arguments():
     parser.add_argument("-delta_better", dest="delta_better", type=float, default=0.001)
 
     parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
-                                                              "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae"],
+                                                              "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae",
+                                                              "GAN"],
                         required=True)
 
     parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")
