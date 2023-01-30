@@ -36,7 +36,7 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
     loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
-    loss.backwards()
+    loss.backward()
     optimizer.step()
 
     return loss.item()
@@ -66,7 +66,7 @@ def train_critic_encoder(optimizer, train_tensor, random_latent_space, args):
     gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
     loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
-    loss.backwards()
+    loss.backward()
     optimizer.step()
 
     return loss.item()
@@ -142,8 +142,8 @@ def train_model(train_tensors,
                 loss_encoder = wl_random_critic_encoder + wl_real_critic_encoder + mse_loss
                 loss_decoder = wl_real_critic_decoder + wl_random_critic_decoder + mse_loss
 
-                loss_decoder.backwards()
-                loss_encoder.backwards()
+                loss_decoder.backward()
+                loss_encoder.backward()
                 optimizer_decoder.step()
                 optimizer_encoder.step()
 
