@@ -85,7 +85,7 @@ def train_model(train_tensors,
     loss_over_time = {"critic_encoder": [], "critic_decoder": [],
                       "encoder": [], "decoder": []}
 
-    multivariate_normal = MultivariateNormal(th.zeros(args.embedding_dim), th.eye(args.embedding_dim))
+    multivariate_normal = MultivariateNormal(th.zeros(args.EMBEDDING), th.eye(args.EMBEDDING))
 
     for epoch in range(epochs):
 
