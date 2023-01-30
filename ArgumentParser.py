@@ -10,6 +10,7 @@ def parse_arguments():
                         help="Number of epochs for offline training")
     parser.add_argument("-l2reg", dest="weight_decay", type=float, default=0)
     parser.add_argument("-critic_iterations", dest="critic_iterations", type=int, default=5)
+    parser.add_argument("-gradient_penalty", dest="GP_hyperparam", type=float, default=10.)
 
     parser.add_argument("-dropout", dest="DROPOUT", type=float, default=0.2)
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
