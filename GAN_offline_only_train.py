@@ -28,7 +28,7 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
     interpolates_critic = args.critic_decoder(interpolates)
     interpolates_critic.mean().backward()
     gradients = interpolates.grad
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparameter
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
     loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
@@ -55,7 +55,7 @@ def train_critic_encoder(optimizer, train_tensor, random_latent_space, args):
     interpolates_critic = args.critic_encoder(interpolates)
     interpolates_critic.mean().backward()
     gradients = interpolates.grad
-    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparameter
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
 
     loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
