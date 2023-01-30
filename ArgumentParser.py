@@ -16,7 +16,7 @@ def parse_arguments():
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
     parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, action="append")
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=2)
-    parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=60)
+    parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=200)
 
     parser.add_argument("-sw", dest="sparsity_weight", type=float, default=1.,
                         help="Sparsity weight for Sparse AE")

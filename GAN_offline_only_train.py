@@ -80,20 +80,21 @@ def train_model(train_tensors,
 
     for epoch in range(epochs):
 
+        critic_tensors = np.array(train_tensors)[np.random.randint(len(train_tensors), size=args.BATCH_SIZE)]
         for critic_iter in range(args.critic_iterations):
             critic_encoder_losses = []
             critic_decoder_losses = []
-            with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
-                for train_tensor in tqdm_epoch:
+            with tqdm.tqdm(critic_tensors, unit="cycles") as tqdm_epoch:
+                for critic_tensor in tqdm_epoch:
                     tqdm_epoch.set_description(f"Critics iteration {critic_iter + 1}")
                     random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
                     critic_encoder_losses.append(train_critic_encoder(optimizer_critic_encoder,
-                                                                      train_tensor,
+                                                                      critic_tensor,
                                                                       random_latent_space,
                                                                       args))
 
                     critic_decoder_losses.append(train_critic_decoder(optimizer_critic_decoder,
-                                                                      train_tensor,
+                                                                      critic_tensor,
                                                                       random_latent_space,
                                                                       args))
 
