@@ -76,6 +76,7 @@ class CriticEncoder(nn.Module):
         x, (_, _) = self.lstm_layers(x)
         att_mask = generate_square_subsequent_mask(x.shape[1]).to(self.device)
         _, attention_weights = self.attention_layer(x, x, x, attn_mask=att_mask)
+        print(x.shape, attention_weights.shape, att_mask.shape)
         x = attention_weights * x
         return self.output_layer(x)
 
