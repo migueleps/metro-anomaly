@@ -53,9 +53,11 @@ def generate_square_subsequent_mask(dim):
 
 class CriticEncoder(nn.Module):
 
-    def __init__(self, embedding_dim, lstm_layers, attention_heads, dropout):
+    def __init__(self, embedding_dim, lstm_layers, attention_heads, dropout, device):
 
         super(CriticEncoder, self).__init__()
+
+        self.device = device
 
         self.lstm_layers = nn.LSTM(input_size=embedding_dim,
                                    hidden_size=2*embedding_dim,
@@ -72,7 +74,7 @@ class CriticEncoder(nn.Module):
     def forward(self, x):
 
         x, (_, _) = self.lstm_layers(x)
-        att_mask = generate_square_subsequent_mask(x.shape[1])
+        att_mask = generate_square_subsequent_mask(x.shape[1]).to(self.device)
         _, attention_weights = self.attention_layer(x, x, x, attn_mask=att_mask)
         x = attention_weights * x
         return self.output_layer(x)

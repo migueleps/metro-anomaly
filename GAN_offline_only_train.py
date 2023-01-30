@@ -300,7 +300,8 @@ def load_parameters(arguments):
     arguments.critic_encoder = CriticEncoder(arguments.EMBEDDING,
                                              arguments.LSTM_LAYERS,
                                              arguments.NHEADS,
-                                             arguments.DROPOUT).to(arguments.device)
+                                             arguments.DROPOUT,
+                                             arguments.device).to(arguments.device)
 
     arguments.critic_decoder = CriticDecoder(arguments.NUMBER_FEATURES,
                                              arguments.LSTM_LAYERS,
