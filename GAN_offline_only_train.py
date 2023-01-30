@@ -21,22 +21,6 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
     wasserstein_loss_real_x = th.mean(-th.ones(decoded_real_x.shape).to(args.device) * decoded_real_x)
     wasserstein_loss_random_x = th.mean(th.ones(decoded_random_x.shape).to(args.device) * decoded_random_x)
 
-    # gradient penalty regularization
-
-    #random_weight_average_parameter = th.rand(train_tensor.shape).to(args.device)
-    #interpolates = random_weight_average_parameter * train_tensor + (
-    #            1 - random_weight_average_parameter) * reconstructed_random_latent
-    #interpolates = interpolates.to(args.device)
-    #interpolates_critic = args.critic_decoder(interpolates)
-
-    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
-    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
-    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
-
-    #loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
-
     random_weight_average_parameter = th.rand(train_tensor.shape).to(args.device)
     interpolates = Variable(random_weight_average_parameter * train_tensor +
                             (1 - random_weight_average_parameter) * reconstructed_random_latent)
@@ -44,19 +28,9 @@ def train_critic_decoder(optimizer, train_tensor, random_latent_space, args):
     interpolates_critic = args.critic_decoder(interpolates)
     interpolates_critic.mean().backward()
     gradients = interpolates.grad
-    gp_loss = th.sqrt(th.sum(th.square(gradients).view(-1)))
-    #interpolates = random_weight_average_parameter * latent_space + (
-    #            1 - random_weight_average_parameter) * random_latent_space
-    #interpolates = interpolates.to(args.device)
-    #interpolates_critic = args.critic_encoder(interpolates)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparameter
 
-    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
-    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
-    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
-
-    loss = gp_loss + wasserstein_loss_random_x + wasserstein_loss_real_x
+    loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
     optimizer.step()
 
@@ -76,24 +50,14 @@ def train_critic_encoder(optimizer, train_tensor, random_latent_space, args):
 
     random_weight_average_parameter = th.rand(latent_space.shape).to(args.device)
     interpolates = Variable(random_weight_average_parameter * latent_space +
-                  (1 - random_weight_average_parameter) * random_latent_space)
+                            (1 - random_weight_average_parameter) * random_latent_space)
     interpolates.requires_grad_(True)
     interpolates_critic = args.critic_encoder(interpolates)
     interpolates_critic.mean().backward()
     gradients = interpolates.grad
-    gp_loss = th.sqrt(th.sum(th.square(gradients).view(-1)))
-    #interpolates = random_weight_average_parameter * latent_space + (
-    #            1 - random_weight_average_parameter) * random_latent_space
-    #interpolates = interpolates.to(args.device)
-    #interpolates_critic = args.critic_encoder(interpolates)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparameter
 
-    #gradients = grad(outputs=interpolates_critic, inputs=interpolates,
-    #                 grad_outputs=th.ones(interpolates_critic.shape).to(args.device),
-    #                 create_graph=True, retain_graph=True, only_inputs=True)[0]
-
-    #gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * args.GP_hyperparam
-
-    loss = gp_loss + wasserstein_loss_random_x + wasserstein_loss_real_x
+    loss = gradient_penalty + wasserstein_loss_random_x + wasserstein_loss_real_x
     loss.backward()
     optimizer.step()
 
@@ -104,7 +68,6 @@ def train_model(train_tensors,
                 epochs,
                 lr,
                 args):
-
     optimizer_critic_encoder = optim.Adam(args.critic_encoder.parameters(), lr=lr)
     optimizer_critic_decoder = optim.Adam(args.critic_decoder.parameters(), lr=lr)
     optimizer_encoder = optim.Adam(args.encoder.parameters(), lr=lr)
@@ -186,7 +149,6 @@ def train_model(train_tensors,
 
 
 def calc_reconstruction_error(reconstructed_ts, original_ts, args):
-
     if args.reconstruction_error_metric == "mse":
         return F.mse_loss(reconstructed_ts, original_ts)
 
@@ -339,7 +301,6 @@ def load_parameters(arguments):
 
 
 def main(arguments):
-
     if all([os.path.exists(arguments.model_saving_string(model)) for model in ["GAN_encoder",
                                                                                "GAN_decoder",
                                                                                "GAN_critic_encoder",
