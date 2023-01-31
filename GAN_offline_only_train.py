@@ -101,6 +101,8 @@ def train_model(train_tensors,
             loss_over_time["critic_encoder"].append(np.mean(critic_encoder_losses))
             loss_over_time["critic_decoder"].append(np.mean(critic_decoder_losses))
 
+        print(f'Epoch {epoch + 1}: critic encoder loss {np.mean(critic_encoder_losses)} critic decoder loss {np.mean(critic_decoder_losses)}')
+
         encoder_losses = []
         decoder_losses = []
         with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
@@ -117,16 +119,18 @@ def train_model(train_tensors,
                 reconstructed_random_latent = args.decoder(random_latent_space)
                 critic_random_x = args.critic_decoder(reconstructed_random_latent)
 
-                wl_real_critic_decoder = th.mean(-th.ones(critic_real_x.shape).to(args.device) * critic_real_x)
-                wl_random_critic_decoder = th.mean(th.ones(critic_random_x.shape).to(args.device) * critic_random_x)
+                # Here we are minimizing the wasserstein loss (instead of maximizing as in the critic)
+                # So we no longer swap the signs
+                wl_real_critic_decoder = th.mean(th.ones(critic_real_x.shape).to(args.device) * critic_real_x)
+                wl_random_critic_decoder = th.mean(-th.ones(critic_random_x.shape).to(args.device) * critic_random_x)
 
                 critic_real_latent = args.critic_encoder(latent_space)
                 critic_random_latent = args.critic_encoder(random_latent_space)
 
                 wl_real_critic_encoder = th.mean(
-                    -th.ones(critic_real_latent.shape).to(args.device) * critic_real_latent)
+                    th.ones(critic_real_latent.shape).to(args.device) * critic_real_latent)
                 wl_random_critic_encoder = th.mean(
-                    th.ones(critic_random_latent.shape).to(args.device) * critic_random_latent)
+                    -th.ones(critic_random_latent.shape).to(args.device) * critic_random_latent)
 
                 mse_loss = F.mse_loss(reconstructed_tensor, train_tensor)
 
@@ -194,7 +198,7 @@ def offline_train(args):
                                  lr=args.LR,
                                  args=args)
 
-    with open(args.results_string("offline"), "wb") as loss_file:
+    with open(args.results_string("offline", args.reconstruction_error_metric), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
     th.save(args.decoder.state_dict(), args.model_saving_string("GAN_decoder"))
