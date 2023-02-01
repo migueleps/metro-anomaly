@@ -175,6 +175,7 @@ def predict(args, test_tensors, tqdm_desc):
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
                 critic_score = args.critic_decoder(test_tensor)
                 critic_scores.append(critic_score)
+                test_tensor = test_tensor.to(th.device("cpu"))
     return reconstruction_errors, critic_scores
 
 
@@ -314,7 +315,7 @@ def main(arguments):
             and not arguments.force_training:
 
         arguments.decoder.load_state_dict(th.load(arguments.model_saving_string("GAN_decoder")))
-        arguments.encoder.load_state_dict(th.load(arguments.model_saving_string("GAN_decoder")))
+        arguments.encoder.load_state_dict(th.load(arguments.model_saving_string("GAN_encoder")))
         arguments.critic_encoder.load_state_dict(th.load(arguments.model_saving_string("GAN_critic_encoder")))
         arguments.critic_decoder.load_state_dict(th.load(arguments.model_saving_string("GAN_critic_decoder")))
     else:
