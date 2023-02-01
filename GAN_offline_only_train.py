@@ -170,6 +170,7 @@ def predict(args, test_tensors, tqdm_desc):
         with tqdm.tqdm(test_tensors, unit="cycles") as tqdm_epoch:
             for test_tensor in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
+                test_tensor = test_tensor.to(args.device)
                 reconstruction = args.decoder(args.encoder(test_tensor))
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
                 critic_score = args.critic_decoder(test_tensor)
@@ -245,7 +246,7 @@ def calculate_test_losses(args):
         for loop in range(args.END_LOOP + 1):
             with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
                 test_tensors = pkl.load(tensor_pkl)
-                all_test_tensors.extend([tensor.to(args.device) for tensor in test_tensors])
+                all_test_tensors.extend(test_tensors)
 
     reconstruction_errors, critic_scores = predict(args, all_test_tensors, "Testing on new data")
 
