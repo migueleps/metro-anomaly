@@ -175,7 +175,6 @@ def predict(args, test_tensors, tqdm_desc):
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
                 critic_score = args.critic_decoder(test_tensor)
                 critic_scores.append(critic_score)
-                test_tensor = test_tensor.to(th.device("cpu"))
     return reconstruction_errors, critic_scores
 
 

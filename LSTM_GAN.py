@@ -60,15 +60,15 @@ class CriticEncoder(nn.Module):
         self.device = device
 
         self.lstm_layers = nn.LSTM(input_size=embedding_dim,
-                                   hidden_size=2*embedding_dim,
+                                   hidden_size=embedding_dim,
                                    batch_first=True,
                                    num_layers=lstm_layers,
                                    dropout=dropout)
-        self.attention_layer = nn.MultiheadAttention(embed_dim=2*embedding_dim,
+        self.attention_layer = nn.MultiheadAttention(embed_dim=embedding_dim,
                                                      num_heads=attention_heads,
                                                      dropout=dropout,
                                                      batch_first=True)
-        self.output_layer = nn.Linear(in_features=2*embedding_dim,
+        self.output_layer = nn.Linear(in_features=embedding_dim,
                                       out_features=1)
 
     def forward(self, x):
@@ -86,16 +86,16 @@ class CriticDecoder(nn.Module):
 
         super(CriticDecoder, self).__init__()
         self.lstm_layers = nn.LSTM(input_size=input_dim,
-                                   hidden_size=2*input_dim,
+                                   hidden_size=input_dim,
                                    batch_first=True,
                                    num_layers=lstm_layers,
                                    dropout=dropout,
                                    bidirectional=True)
-        self.attention_layer = nn.MultiheadAttention(embed_dim=4*input_dim,
+        self.attention_layer = nn.MultiheadAttention(embed_dim=2*input_dim,
                                                      num_heads=attention_heads,
                                                      dropout=dropout,
                                                      batch_first=True)
-        self.output_layer = nn.Linear(in_features=4*input_dim,
+        self.output_layer = nn.Linear(in_features=2*input_dim,
                                       out_features=1)
 
     def forward(self, x):
