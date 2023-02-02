@@ -176,8 +176,12 @@ def predict(args, test_tensors, tqdm_desc):
                 test_tensor = test_tensor.to(args.device)
                 reconstruction = args.decoder(args.encoder(test_tensor))
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
-                critic_score = args.critic_decoder(test_tensor)
-                critic_scores.append(critic_score)
+                try:
+                    critic_score = args.critic_decoder(test_tensor)
+                    critic_scores.append(critic_score)
+                except th.cuda.OutOfMemoryError as e:
+                    print(test_tensor.shape)
+                    raise e
     return reconstruction_errors, critic_scores
 
 
