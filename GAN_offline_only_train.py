@@ -157,7 +157,7 @@ def calc_reconstruction_error(reconstructed_ts, original_ts, args):
     if args.reconstruction_error_metric == "mse":
         return F.mse_loss(reconstructed_ts, original_ts)
 
-    return dtw.dtw(reconstructed_ts.cpu(), original_ts.cpu(), distance_only=True).normalizedDistance
+    return dtw.dtw(reconstructed_ts.squeeze().cpu(), original_ts.squeeze().cpu(), distance_only=True).normalizedDistance
 
 
 def predict(args, test_tensors, tqdm_desc):
