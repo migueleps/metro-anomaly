@@ -155,9 +155,27 @@ def train_model(train_tensors,
 
 def calc_reconstruction_error(reconstructed_ts, original_ts, args):
     if args.reconstruction_error_metric == "mse":
-        return F.mse_loss(reconstructed_ts, original_ts)
+        return F.mse_loss(reconstructed_ts, original_ts, reduction="none").mean(axis=1).detach().cpu().numpy()
 
-    return dtw.dtw(reconstructed_ts.squeeze().cpu(), original_ts.squeeze().cpu(), distance_only=True).normalizedDistance
+    dtw_vector = []
+    reconstructed_ts = reconstructed_ts.squeeze().cpu()
+    original_ts = original_ts.squeeze().cpu()
+
+    for i in range(reconstructed_ts.shape[0]):
+        if i < args.dtw_local_size:
+            start = 0
+            end = 2*args.dtw_local_size
+        elif i > reconstructed_ts.shape[0] - args.dtw_local_size:
+            start = reconstructed_ts.shape[0] - 2*args.dtw_local_size
+            end = reconstructed_ts.shape[0]
+        else:
+            start = i - args.dtw_local_size
+            end = i + args.dtw_local_size
+        local_recons = reconstructed_ts[start:end]
+        local_orig = original_ts[start:end]
+        dtw_vector.append(dtw.dtw(local_recons, local_orig, distance_only=True).normalizedDistance)
+
+    return np.array(dtw_vector)
 
 
 def predict(args, test_tensors, tqdm_desc):
@@ -178,7 +196,7 @@ def predict(args, test_tensors, tqdm_desc):
                 reconstruction = args.decoder(args.encoder(test_tensor))
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
                 critic_score = args.critic_decoder(test_tensor)
-                critic_scores.append(critic_score)
+                critic_scores.append(critic_score.detach().cpu().numpy())
 
     return reconstruction_errors, critic_scores
 

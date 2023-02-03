@@ -39,6 +39,7 @@ def parse_arguments():
                         required=True)
 
     parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")
+    parser.add_argument("-dtw_local", dest="dtw_local_size", type=int, default=5)
 
     parser.add_argument("-separate_comp", dest="separate_comp", action="store_true")
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
