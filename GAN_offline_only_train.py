@@ -155,7 +155,7 @@ def train_model(train_tensors,
 
 def calc_reconstruction_error(reconstructed_ts, original_ts, args):
     if args.reconstruction_error_metric == "mse":
-        return F.mse_loss(reconstructed_ts, original_ts, reduction="none").mean(axis=1).detach().cpu().squeeze().numpy()
+        return F.mse_loss(reconstructed_ts, original_ts, reduction="none").squeeze().mean(axis=1).detach().cpu().squeeze().numpy()
 
     dtw_vector = []
     reconstructed_ts = reconstructed_ts.squeeze().cpu()
