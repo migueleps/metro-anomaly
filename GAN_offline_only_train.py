@@ -189,10 +189,7 @@ def predict(args, test_tensors, tqdm_desc):
             for test_tensor in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
                 if test_tensor.shape[1] > 3600:
-                    max_reconserror = max(reconstruction_errors)
-                    print(max_reconserror)
-                    print(100*max_reconserror)
-                    reconstruction_errors.append(np.full(test_tensor.shape[1], 100 * max(reconstruction_errors)))
+                    reconstruction_errors.append(np.full(test_tensor.shape[1], max(map(sum, reconstruction_errors))))
                     critic_scores.append(np.zeros(test_tensor.shape[1]))
                     continue
                 test_tensor = test_tensor.to(args.device)
