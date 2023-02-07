@@ -155,7 +155,7 @@ def train_model(train_tensors,
 
 def calc_reconstruction_error(reconstructed_ts, original_ts, args):
     if args.reconstruction_error_metric == "mse":
-        return F.mse_loss(reconstructed_ts, original_ts, reduction="none").mean(axis=1).detach().cpu().numpy()
+        return F.mse_loss(reconstructed_ts, original_ts, reduction="none").mean(axis=1).detach().cpu().squeeze().numpy()
 
     dtw_vector = []
     reconstructed_ts = reconstructed_ts.squeeze().cpu()
@@ -189,14 +189,14 @@ def predict(args, test_tensors, tqdm_desc):
             for test_tensor in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
                 if test_tensor.shape[1] > 3600:
-                    reconstruction_errors.append(100 * max(reconstruction_errors))
-                    critic_scores.append(0)
+                    reconstruction_errors.append(np.full(test_tensor.shape[1], 100 * max(reconstruction_errors)))
+                    critic_scores.append(np.zeros(test_tensor.shape[1]))
                     continue
                 test_tensor = test_tensor.to(args.device)
                 reconstruction = args.decoder(args.encoder(test_tensor))
                 reconstruction_errors.append(calc_reconstruction_error(reconstruction, test_tensor, args))
                 critic_score = args.critic_decoder(test_tensor)
-                critic_scores.append(critic_score.detach().cpu().numpy())
+                critic_scores.append(critic_score.detach().squeeze().cpu().numpy())
 
     return reconstruction_errors, critic_scores
 
