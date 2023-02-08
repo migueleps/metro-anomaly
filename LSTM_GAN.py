@@ -92,7 +92,7 @@ class CriticDecoder(nn.Module):
                                    num_layers=lstm_layers,
                                    dropout=dropout,
                                    bidirectional=True)
-        self.attention_layer = nn.MultiheadAttention(embed_dim=2*input_dim,
+        self.attention_layer = nn.MultiheadAttention(embed_dim=input_dim,
                                                      num_heads=attention_heads,
                                                      dropout=dropout,
                                                      batch_first=True)
@@ -100,7 +100,7 @@ class CriticDecoder(nn.Module):
                                       out_features=1)
 
     def forward(self, x):
-        
+
         _, attention_weights = self.attention_layer(x, x, x)
         x = th.matmul(attention_weights, x)
         x, (_, _) = self.lstm_layers(x)
