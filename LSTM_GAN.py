@@ -73,10 +73,11 @@ class CriticEncoder(nn.Module):
 
     def forward(self, x):
 
-        x, (_, _) = self.lstm_layers(x)
         att_mask = generate_square_subsequent_mask(x.shape[1]).to(self.device)
         _, attention_weights = self.attention_layer(x, x, x, attn_mask=att_mask)
         x = th.matmul(attention_weights, x)
+        x, (_, _) = self.lstm_layers(x)
+
         return self.output_layer(x)
 
 
@@ -99,8 +100,9 @@ class CriticDecoder(nn.Module):
                                       out_features=1)
 
     def forward(self, x):
-        x, (_, _) = self.lstm_layers(x)
+        
         _, attention_weights = self.attention_layer(x, x, x)
         x = th.matmul(attention_weights, x)
+        x, (_, _) = self.lstm_layers(x)
         return self.output_layer(x)
 
