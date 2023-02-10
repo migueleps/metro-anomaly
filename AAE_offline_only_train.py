@@ -260,9 +260,9 @@ def load_parameters(arguments):
 
     models = dict(SimpleDiscriminator=SimpleDiscriminator,
                   LSTMDiscriminator=LSTMDiscriminator,
-                  ConvDiscriminator = ConvDiscriminator)
+                  ConvDiscriminator=ConvDiscriminator)
 
-    arguments.discriminator = models[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
+    arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
                                                            arguments.DROPOUT).to(arguments.device)
 
     return arguments
