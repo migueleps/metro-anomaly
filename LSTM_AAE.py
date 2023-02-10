@@ -19,7 +19,7 @@ class Encoder(nn.Module):
 
     def forward(self, x):
         hidden_outs, (hidden, _) = self.lstm_layers(x)
-        return hidden[-1], hidden_outs
+        return hidden[-1]
 
 
 class Decoder(nn.Module):
