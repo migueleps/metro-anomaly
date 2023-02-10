@@ -51,7 +51,7 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, args):
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
     loss.backward()
     optimizer.step()
-    print(loss.item())
+    #print(loss.item())
     return loss.item()
 
 
@@ -79,7 +79,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, arg
 
     optimizer_encoder.step()
     optimizer_decoder.step()
-    print(loss.item())
+    #print(loss.item())
     return loss.item()
 
 
