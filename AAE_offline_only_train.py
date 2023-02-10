@@ -127,12 +127,12 @@ def train_model(train_tensors,
         loss_over_time['discriminator'].append(np.mean(discriminator_losses))
         loss_over_time['encoder/decoder'].append(np.mean(encoder_decoder_losses))
 
+        print(f'Epoch {epoch + 1}: discriminator loss {np.mean(discriminator_losses)} encoder/decoder loss {np.mean(encoder_decoder_losses)}')
+
         if np.isnan(np.mean(discriminator_losses)):
             for param in args.discriminator.parameters():
                 print(param)
-                exit(1)
-
-        print(f'Epoch {epoch + 1}: discriminator loss {np.mean(discriminator_losses)} encoder/decoder loss {np.mean(encoder_decoder_losses)}')
+            exit(1)
 
     return loss_over_time
 
