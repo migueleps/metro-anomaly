@@ -54,7 +54,6 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, args):
     nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
 
     optimizer.step()
-    #print(loss.item())
     return loss.item()
 
 
@@ -85,7 +84,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, arg
 
     optimizer_encoder.step()
     optimizer_decoder.step()
-    #print(loss.item())
+
     return loss.item()
 
 
@@ -128,11 +127,6 @@ def train_model(train_tensors,
         loss_over_time['encoder/decoder'].append(np.mean(encoder_decoder_losses))
 
         print(f'Epoch {epoch + 1}: discriminator loss {np.mean(discriminator_losses)} encoder/decoder loss {np.mean(encoder_decoder_losses)}')
-
-        if np.isnan(np.mean(discriminator_losses)):
-            for param in args.discriminator.parameters():
-                print(param)
-            exit(1)
 
     return loss_over_time
 

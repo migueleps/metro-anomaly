@@ -1,5 +1,6 @@
 from torch import nn
 from torch.nn.utils import weight_norm
+import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
@@ -72,7 +73,7 @@ class SimpleDiscriminator(nn.Module):
         x = self.fc3(x)
         x = self.activation_func(x)
         x = self.dropout(x)
-        return self.output_layer(x)
+        return F.sigmoid(self.output_layer(x))
 
 
 class LSTMDiscriminator(nn.Module):
@@ -91,7 +92,7 @@ class LSTMDiscriminator(nn.Module):
 
     def forward(self, x):
         x, _ = self.lstm(x)
-        return self.output_layer(x)
+        return F.sigmoid(self.output_layer(x))
 
 
 ######################################################################################
@@ -163,4 +164,4 @@ class ConvDiscriminator(nn.Module):
         for layer in self.TCN_layers:
             x = layer(x)
 
-        return self.output_layer(x)
+        return F.sigmoid(self.output_layer(x))
