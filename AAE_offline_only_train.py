@@ -50,6 +50,9 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, args):
 
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
     loss.backward()
+
+    nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
+
     optimizer.step()
     #print(loss.item())
     return loss.item()
@@ -76,6 +79,9 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, arg
 
     loss = th.mean(reconstruction_loss - discriminator_loss)
     loss.backward()
+
+    nn.utils.clip_grad_norm_(args.encoder.parameters(), 1)
+    nn.utils.clip_grad_norm_(args.decoder.parameters(), 1)
 
     optimizer_encoder.step()
     optimizer_decoder.step()
@@ -120,6 +126,11 @@ def train_model(train_tensors,
 
         loss_over_time['discriminator'].append(np.mean(discriminator_losses))
         loss_over_time['encoder/decoder'].append(np.mean(encoder_decoder_losses))
+
+        if np.isnan(np.mean(discriminator_losses)):
+            for param in args.discriminator.parameters():
+                print(param)
+                exit(1)
 
         print(f'Epoch {epoch + 1}: discriminator loss {np.mean(discriminator_losses)} encoder/decoder loss {np.mean(encoder_decoder_losses)}')
 
