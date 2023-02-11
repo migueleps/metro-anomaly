@@ -142,9 +142,17 @@ def predict(args, test_tensors, tqdm_desc):
             for test_tensor in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
                 test_tensor = test_tensor.to(args.device)
-                reconstruction = args.decoder(args.encoder(test_tensor))
+                latent_vector = args.encoder(test_tensor)
+
+                stacked_LV = th.repeat_interleave(latent_vector,
+                                                  test_tensor.shape[1],
+                                                  dim=1).reshape(-1,
+                                                                 test_tensor.shape[1],
+                                                                 latent_vector.shape[-1]).to(args.device)
+
+                reconstruction = args.decoder(stacked_LV)
                 reconstruction_errors.append(F.mse_loss(reconstruction, test_tensor).item())
-                critic_score = th.mean(args.discriminator(test_tensor))
+                critic_score = th.mean(args.discriminator(stacked_LV))
                 critic_scores.append(critic_score.item())
 
     return reconstruction_errors, critic_scores
