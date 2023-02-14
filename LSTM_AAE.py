@@ -144,7 +144,7 @@ class ConvDiscriminator(nn.Module):
         hidden_dim = 30
         num_layers = 8
         channels = num_layers * [hidden_dim]
-        self.TCN_layers = []
+        TCN_layers = []
         kernel_size = 5
 
         for i in range(num_layers):
@@ -152,9 +152,10 @@ class ConvDiscriminator(nn.Module):
             in_channels = input_dim if i == 0 else channels[i - 1]
             out_channels = channels[i]
             padding = (kernel_size - 1) * dilation
-            self.TCN_layers.append(TemporalBlock(in_channels, out_channels, kernel_size, stride=1,
-                                                 dilation=dilation, padding=padding, dropout=dropout))
+            TCN_layers.append(TemporalBlock(in_channels, out_channels, kernel_size, stride=1,
+                                            dilation=dilation, padding=padding, dropout=dropout))
 
+        self.TCN_layers = nn.ModuleList(TCN_layers)
         self.output_layer = nn.Linear(in_features=channels[-1],
                                       out_features=1)
 
