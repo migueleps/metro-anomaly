@@ -109,7 +109,7 @@ def offline_train(model, args):
     else:
         with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
             train_tensors = pkl.load(tensor_pkl)
-            train_tensors = [tensor.to(args.device) for tensor in train_tensors]
+            train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
 
         with open(f"{args.data_folder}val_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
             val_tensors = pkl.load(tensor_pkl)
