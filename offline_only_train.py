@@ -11,7 +11,6 @@ from LSTM_AE_multi_encoder import LSTM_AE_MultiEncoder
 from LSTM_AE_diff_comp import LSTM_AE_MultiComp
 from LSTM_SAE_diff_comp import LSTM_SAE_MultiComp
 import tqdm
-from EarlyStopper import EarlyStopping
 from ArgumentParser import parse_arguments
 
 
@@ -24,9 +23,7 @@ def train_model(model,
 
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=args.weight_decay)
     loss_over_time = {"train": [], "val": []}
-    early_stopper = EarlyStopping(args.successive_iters,
-                                  args.delta_worse,
-                                  args.delta_better)
+
     for epoch in range(epochs):
         model.train()
         train_losses = []
@@ -54,10 +51,6 @@ def train_model(model,
         loss_over_time['val'].append(val_loss)
 
         print(f'Epoch {epoch+1}: train loss {train_loss} val loss {val_loss}')
-
-        if epoch > 100 and early_stopper.stopping_condition(val_loss):
-            early_stopper.print_stop_reason()
-            break
 
     return model, loss_over_time
 
