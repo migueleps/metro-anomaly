@@ -28,7 +28,7 @@ lstm_layers = [2, 3, 4, 5]
 
 model = sys.argv[1]
 
-base_string = lambda embedding, layers, n_epochs, learning_rate, reg, separate: f"python offline_only_train.py \
+base_string = lambda embedding, layers, n_epochs, learning_rate: f"python offline_only_train.py \
 -model {model} -embedding {embedding} -n_layers {layers} -epochs {n_epochs} -lr {learning_rate} \
 {reg_string[model]} {sep_string[model]} -force-training"
 
