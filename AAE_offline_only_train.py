@@ -279,13 +279,13 @@ def load_parameters(arguments):
                                                            arguments.DROPOUT).to(arguments.device)
 
     for param in arguments.discriminator.parameters():
-        param.register_hook(lambda grad: grad.clamp(-5, 5))
+        param.register_hook(lambda grad: grad.clamp(-3, 3))
 
     for param in arguments.decoder.parameters():
-        param.register_hook(lambda grad: grad.clamp(-5, 5))
+        param.register_hook(lambda grad: grad.clamp(-3, 3))
 
     for param in arguments.encoder.parameters():
-        param.register_hook(lambda grad: grad.clamp(-5, 5))
+        param.register_hook(lambda grad: grad.clamp(-3, 3))
 
     return arguments
 
