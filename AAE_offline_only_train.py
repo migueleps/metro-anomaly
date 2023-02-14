@@ -47,11 +47,16 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, args):
 
     loss_real_term = th.log(discriminator_real)
     if th.isnan(loss_real_term).any().item():
-        print(discriminator_real)
         for param in args.discriminator.parameters():
             print(param)
+        print(discriminator_real)
         exit(1)
     loss_random_term = th.log(1-discriminator_random)
+    if th.isnan(loss_random_term).any().item():
+        for param in args.discriminator.parameters():
+            print(param)
+        print(discriminator_random)
+        exit(1)
 
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
     loss.backward()
