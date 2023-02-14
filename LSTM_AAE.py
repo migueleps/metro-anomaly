@@ -165,4 +165,5 @@ class ConvDiscriminator(nn.Module):
         for layer in self.TCN_layers:
             x = layer(x)
 
+        x = x.permute(0, 2, 1)
         return th.sigmoid(self.output_layer(x))
