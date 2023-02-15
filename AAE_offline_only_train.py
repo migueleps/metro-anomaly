@@ -56,7 +56,8 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
         for n, param in args.discriminator.named_parameters():
             gradient_file.write(f"{n}\n")
-            gradient_file.write(param.grad)
+            gradient_file.write(str(param.grad))
+            gradient_file.write("\n")
 
     optimizer.step()
     return loss.item()
