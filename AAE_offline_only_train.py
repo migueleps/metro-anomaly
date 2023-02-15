@@ -28,7 +28,7 @@ def frozen_params(module: nn.Module):
         p.requires_grad = False
 
 
-def train_discriminator(optimizer, train_tensor, random_latent_space, args):
+def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, args):
 
     frozen_params(args.encoder)
     frozen_params(args.decoder)
@@ -53,11 +53,16 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, args):
 
     nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
 
+    with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
+        for n, param in args.discriminator.named_parameters():
+            gradient_file.write(f"{n}\n")
+            gradient_file.write(param.grad)
+
     optimizer.step()
     return loss.item()
 
 
-def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, args):
+def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, epoch, args):
 
     free_params(args.encoder)
     free_params(args.decoder)
@@ -116,11 +121,13 @@ def train_model(train_tensors,
                 discriminator_losses.append(train_discriminator(optimizer_discriminator,
                                                                 train_tensor,
                                                                 random_latent_space,
+                                                                epoch,
                                                                 args))
 
                 encoder_decoder_losses.append(train_reconstruction(optimizer_encoder,
                                                                    optimizer_decoder,
                                                                    train_tensor,
+                                                                   epoch,
                                                                    args))
 
         loss_over_time['discriminator'].append(np.mean(discriminator_losses))
@@ -286,6 +293,8 @@ def load_parameters(arguments):
 
     for param in arguments.encoder.parameters():
         param.register_hook(lambda grad: grad.clamp(-1, 1))
+
+    arguments.gradient_logger = lambda model, epoch: f"gradients/{arguments.model_string(model)}_{epoch}"
 
     return arguments
 
