@@ -142,7 +142,7 @@ class ConvDiscriminator(nn.Module):
         # use same default parameters as TCN repo
 
         hidden_dim = 30
-        num_layers = 8
+        num_layers = 4
         channels = num_layers * [hidden_dim]
         TCN_layers = []
         kernel_size = 5
@@ -166,4 +166,6 @@ class ConvDiscriminator(nn.Module):
             x = layer(x)
 
         x = x.permute(0, 2, 1)
-        return th.sigmoid(self.output_layer(x))
+        x = self.output_layer(x)
+
+        return x, th.sigmoid(x)
