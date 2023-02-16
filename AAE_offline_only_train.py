@@ -17,7 +17,7 @@ from LSTM_AAE import Encoder, Decoder, SimpleDiscriminator, LSTMDiscriminator, C
 #
 ####################
 
-th.autograd.set_detect_anomaly(True)
+#th.autograd.set_detect_anomaly(True)
 
 def free_params(module: nn.Module):
     for p in module.parameters():
@@ -81,6 +81,9 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
             gradient_file.write(f"{n}\n")
             gradient_file.write(str(param.data))
             gradient_file.write("\n")
+    for n, param in args.discriminator.named_parameters():
+        if th.isnan(param.data).any().item():
+            exit(1)
     return loss.item()
 
 
