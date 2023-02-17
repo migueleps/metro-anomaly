@@ -102,7 +102,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, epo
                                                      real_latent_space.shape[-1]).to(args.device)
 
     reconstructed_input = args.decoder(stacked_LV)
-    _, discriminator_real_latent = args.discriminator(Variable(stacked_LV))
+    discriminator_real_latent = args.discriminator(Variable(stacked_LV))
 
     reconstruction_loss = F.mse_loss(reconstructed_input, train_tensor)
     discriminator_loss = args.WAE_regularization_term * (th.log(discriminator_real_latent))
