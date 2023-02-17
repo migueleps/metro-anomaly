@@ -108,12 +108,13 @@ class TemporalBlock(nn.Module):
         self.padding = padding
         self.conv1 = weight_norm(nn.Conv1d(n_inputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
+        self.batch_norm1 = nn.BatchNorm1d(n_outputs)
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
 
         self.conv2 = weight_norm(nn.Conv1d(n_outputs, n_outputs, kernel_size,
                                            stride=stride, padding=padding, dilation=dilation))
-
+        self.batch_norm2 = nn.BatchNorm1d(n_outputs)
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
         self.init_weights()
 
@@ -127,10 +128,10 @@ class TemporalBlock(nn.Module):
         res = x if self.downsample is None else self.downsample(x)
         x = self.conv1(x)
         x = x[:, :, :-self.padding].contiguous()
-        x = self.dropout(self.relu(x))
+        x = self.dropout(self.batch_norm1(self.relu(x)))
         x = self.conv2(x)
         x = x[:, :, :-self.padding].contiguous()
-        out = self.dropout(self.relu(x))
+        out = self.dropout(self.batch_norm2(self.relu(x)))
 
         return self.relu(out + res)
 
@@ -142,7 +143,7 @@ class ConvDiscriminator(nn.Module):
         # use same default parameters as TCN repo
 
         hidden_dim = 30
-        num_layers = 4
+        num_layers = 8
         channels = num_layers * [hidden_dim]
         TCN_layers = []
         kernel_size = 5
@@ -168,4 +169,4 @@ class ConvDiscriminator(nn.Module):
         x = x.permute(0, 2, 1)
         x = self.output_layer(x)
 
-        return x, th.sigmoid(x)
+        return th.sigmoid(x)

@@ -19,6 +19,7 @@ from LSTM_AAE import Encoder, Decoder, SimpleDiscriminator, LSTMDiscriminator, C
 
 #th.autograd.set_detect_anomaly(True)
 
+
 def free_params(module: nn.Module):
     for p in module.parameters():
         p.requires_grad = True
@@ -43,47 +44,47 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
                                                      train_tensor.shape[1],
                                                      real_latent_space.shape[-1]).to(args.device)
 
-    presig_real, discriminator_real = args.discriminator(stacked_LV)
-    presig_random, discriminator_random = args.discriminator(random_latent_space)
+    discriminator_real = args.discriminator(stacked_LV)
+    discriminator_random = args.discriminator(random_latent_space)
 
     loss_real_term = th.log(discriminator_real)
     loss_random_term = th.log(1-discriminator_random)
 
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
 
-    with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
-        gradient_file.write(f"Discriminator pre-sigmoid real latent\n")
-        gradient_file.write(f"{str(presig_real)}\n")
-        gradient_file.write(f"Discriminator pre-sigmoid random latent\n")
-        gradient_file.write(f"{str(presig_random)}\n")
-        gradient_file.write(f"Discriminator loss real\n")
-        gradient_file.write(f"{str(loss_real_term)}\n")
-        gradient_file.write(f"Discriminator loss random\n")
-        gradient_file.write(f"{str(loss_random_term)}\n")
-        gradient_file.write(f"Discriminator total loss\n")
-        gradient_file.write(f"{str(loss)}\n")
-        gradient_file.write("\n")
+    #with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
+    #    gradient_file.write(f"Discriminator pre-sigmoid real latent\n")
+    #    gradient_file.write(f"{str(presig_real)}\n")
+    #    gradient_file.write(f"Discriminator pre-sigmoid random latent\n")
+    #    gradient_file.write(f"{str(presig_random)}\n")
+    #    gradient_file.write(f"Discriminator loss real\n")
+    #    gradient_file.write(f"{str(loss_real_term)}\n")
+    #    gradient_file.write(f"Discriminator loss random\n")
+    #    gradient_file.write(f"{str(loss_random_term)}\n")
+    #    gradient_file.write(f"Discriminator total loss\n")
+    #    gradient_file.write(f"{str(loss)}\n")
+    #    gradient_file.write("\n")
 
     loss.backward()
 
     nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
 
-    with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
-        for n, param in args.discriminator.named_parameters():
-            gradient_file.write(f"{n}\n")
-            gradient_file.write(str(param.grad))
-            gradient_file.write("\n")
+    #with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
+    #    for n, param in args.discriminator.named_parameters():
+    #        gradient_file.write(f"{n}\n")
+    #        gradient_file.write(str(param.grad))
+    #        gradient_file.write("\n")
 
     optimizer.step()
 
-    with open(args.param_logger("WAE_discriminator", epoch), "a") as gradient_file:
-        for n, param in args.discriminator.named_parameters():
-            gradient_file.write(f"{n}\n")
-            gradient_file.write(str(param.data))
-            gradient_file.write("\n")
-    for n, param in args.discriminator.named_parameters():
-        if th.isnan(param.data).any().item():
-            exit(1)
+    #with open(args.param_logger("WAE_discriminator", epoch), "a") as gradient_file:
+    #    for n, param in args.discriminator.named_parameters():
+    #        gradient_file.write(f"{n}\n")
+    #        gradient_file.write(str(param.data))
+    #        gradient_file.write("\n")
+    #for n, param in args.discriminator.named_parameters():
+    #    if th.isnan(param.data).any().item():
+    #        exit(1)
     return loss.item()
 
 
@@ -310,14 +311,14 @@ def load_parameters(arguments):
     arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
                                                            arguments.DROPOUT).to(arguments.device)
 
-    for param in arguments.discriminator.parameters():
-        param.register_hook(lambda grad: grad.clamp(-1, 1))
+    #for param in arguments.discriminator.parameters():
+    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
 
-    for param in arguments.decoder.parameters():
-        param.register_hook(lambda grad: grad.clamp(-1, 1))
+    #for param in arguments.decoder.parameters():
+    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
 
-    for param in arguments.encoder.parameters():
-        param.register_hook(lambda grad: grad.clamp(-1, 1))
+    #for param in arguments.encoder.parameters():
+    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
 
     arguments.gradient_logger = lambda model, epoch: f"gradients/grad_{arguments.model_string(model)}_{epoch}"
     arguments.loss_logger = lambda model, epoch: f"gradients/loss_{arguments.model_string(model)}_{epoch}"
