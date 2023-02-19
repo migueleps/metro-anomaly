@@ -1,8 +1,8 @@
 import sys
 import os
 
-epochs = [100, 150, 200, 250]
-lrs = [1e-3, 1e-4, 1e-2]
+epochs = [100, 250]
+lrs = [1e-3, 1e-4, 3e-3]
 emb_size = {"lstm_ae": [4, 6],
             "lstm_sae": [16, 32, 64],
             "multi_enc_sae": [16, 32, 64],
