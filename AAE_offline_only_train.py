@@ -124,9 +124,9 @@ def train_model(train_tensors,
                 lr,
                 args):
 
-    optimizer_discriminator = optim.Adam(args.discriminator.parameters(), lr=0.1 * lr)
-    optimizer_encoder = optim.Adam(args.encoder.parameters(), lr=lr)
-    optimizer_decoder = optim.Adam(args.decoder.parameters(), lr=lr)
+    optimizer_discriminator = optim.Adam(args.discriminator.parameters(), lr=args.disc_lr)
+    optimizer_encoder = optim.Adam(args.encoder.parameters(), lr=args.LR)
+    optimizer_decoder = optim.Adam(args.decoder.parameters(), lr=args.LR)
 
     loss_over_time = {"discriminator": [], "encoder/decoder": []}
 
