@@ -104,7 +104,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, epo
     reconstructed_input = args.decoder(stacked_LV)
     discriminator_real_latent = args.discriminator(Variable(stacked_LV))
 
-    reconstruction_loss = F.mse_loss(reconstructed_input, train_tensor)
+    reconstruction_loss = F.mse_loss(reconstructed_input, train_tensor, reduction="none").mean(dim=1)
     discriminator_loss = args.WAE_regularization_term * (th.log(discriminator_real_latent))
 
     loss = th.mean(reconstruction_loss - discriminator_loss)
@@ -116,7 +116,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, epo
     optimizer_encoder.step()
     optimizer_decoder.step()
 
-    return loss.item()
+    return reconstruction_loss.mean().item()
 
 
 def train_model(train_tensors,
