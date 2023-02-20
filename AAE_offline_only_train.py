@@ -50,7 +50,10 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     loss_random_term = th.log(discriminator_random)
     loss_real_term = th.log(1-discriminator_real)
 
-    loss = args.WAE_regularization_term * th.mean(loss_real_term + loss_random_term)
+    loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
+
+    print(loss_real_term, loss_random_term, th.mean(loss_real_term + loss_random_term),
+          -th.mean(loss_real_term + loss_random_term))
 
     #with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
     #    gradient_file.write(f"Discriminator pre-sigmoid real latent\n")
@@ -65,7 +68,7 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     #    gradient_file.write(f"{str(loss)}\n")
     #    gradient_file.write("\n")
 
-    loss.backward(th.Tensor([-1]))
+    loss.backward()
 
     nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
 
