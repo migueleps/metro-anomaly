@@ -52,7 +52,8 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
 
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
 
-    print(loss_real_term, loss_random_term, th.mean(loss_real_term + loss_random_term),
+    print(discriminator_real,loss_real_term, discriminator_random,
+          loss_random_term, th.mean(loss_real_term + loss_random_term),
           -th.mean(loss_real_term + loss_random_term))
 
     #with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
