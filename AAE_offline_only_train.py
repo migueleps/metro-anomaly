@@ -47,8 +47,8 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     discriminator_real = args.discriminator(stacked_LV)
     discriminator_random = args.discriminator(random_latent_space)
 
-    loss_real_term = th.log(discriminator_random)
-    loss_random_term = th.log(1-discriminator_real)
+    loss_random_term = th.log(discriminator_random)
+    loss_real_term = th.log(1-discriminator_real)
 
     loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
 
