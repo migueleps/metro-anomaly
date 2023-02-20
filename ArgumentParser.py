@@ -6,6 +6,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-lr", dest="LR", type=float, default=1e-3)
+    parser.add_argument("-disc_lr", dest="disc_lr", type=float, default=1e-3)
     parser.add_argument("-epochs", dest="EPOCHS", type=int, default=1000,
                         help="Number of epochs for offline training")
     parser.add_argument("-l2reg", dest="weight_decay", type=float, default=0)
