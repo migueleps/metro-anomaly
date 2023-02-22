@@ -85,7 +85,7 @@ class LSTMDiscriminator(nn.Module):
                             dropout=dropout,
                             bidirectional=True,
                             batch_first=True,
-                            num_layers=2)
+                            num_layers=5)
 
         self.output_layer = nn.Linear(in_features=128,
                                       out_features=1)
