@@ -5,9 +5,9 @@ epochs = [100, 200]
 lrs = [1e-3, 1e-4]
 emb_size = {"lstm_ae": [4, 6],
             "lstm_sae": [32, 64],
-            "multi_enc_sae": [16, 32, 64],
+            "multi_enc_sae": [32, 64],
             "multi_enc_ae": [4, 6],
-            "diff_comp_sae": [16, 32, 64],
+            "diff_comp_sae": [32, 64],
             "diff_comp_ae": [4, 6]}
 
 reg_string = {"lstm_ae": "",

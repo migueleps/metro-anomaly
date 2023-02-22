@@ -29,21 +29,42 @@ class Decoder(nn.Module):
                  embedding_dim,
                  output_dim,
                  dropout,
-                 lstm_layers):
+                 lstm_layers,
+                 device=th.device("cuda")):
         super(Decoder, self).__init__()
 
-        self.lstm_layers = nn.LSTM(input_size=embedding_dim,
+        self.dropout = nn.Dropout(dropout)
+        self.embedding_dim = embedding_dim
+        self.device = device
+        self.n_layers = lstm_layers
+        self.lstm_layers = nn.LSTM(input_size=output_dim,
                                    hidden_size=embedding_dim,
+                                   dropout=dropout,
                                    batch_first=True,
-                                   num_layers=lstm_layers,
-                                   dropout=dropout)
+                                   num_layers=lstm_layers)
 
         self.output_layer = nn.Linear(in_features=embedding_dim,
                                       out_features=output_dim)
 
-    def forward(self, x):
-        x, (_, _) = self.lstm_layers(x)
-        return self.output_layer(x)
+    def init_hidden(self, latent_space):
+        hidden_states = th.stack([latent_space for _ in range(self.n_layers)]).to(self.device)
+        cell_states = th.zeros(self.n_layers, self.embedding_dim, device=self.device)
+        return hidden_states, cell_states.unsqueeze(1)
+
+    def forward(self, latent_space, number_outputs):
+
+        hidden_states, cell_states = self.init_hidden(latent_space)
+        iter_input = self.output_layer(latent_space).unsqueeze(0)
+        output = [iter_input]
+
+        for _ in range(number_outputs-1):
+            lstm_outs, (hidden_states, cell_states) = self.lstm_layers(iter_input, (hidden_states, cell_states))
+            new_output = self.output_layer(lstm_outs)
+            output.append(new_output)
+            iter_input = new_output
+
+        output = th.cat(output, dim=1)
+        return th.flip(output, [0])
 
 
 class LSTM_SAE_MultiComp(nn.Module):
@@ -105,13 +126,8 @@ class LSTM_SAE_MultiComp(nn.Module):
         latent_vector0, hidden_outs0 = self.encode_comp0(comp0)
         latent_vector1, hidden_outs1 = self.encode_comp1(comp1)
 
-        stacked_LV0 = th.repeat_interleave(latent_vector0, n_examples_comp0,
-                                           dim=1).reshape(-1, n_examples_comp0, self.embedding_dim).to(self.device)
-        stacked_LV1 = th.repeat_interleave(latent_vector1, n_examples_comp1,
-                                           dim=1).reshape(-1, n_examples_comp1, self.embedding_dim).to(self.device)
-
-        reconstructed_comp0 = self.decode_comp0(stacked_LV0)
-        reconstructed_comp1 = self.decode_comp1(stacked_LV1)
+        reconstructed_comp0 = self.decode_comp0(latent_vector0, n_examples_comp0)
+        reconstructed_comp1 = self.decode_comp1(latent_vector1, n_examples_comp1)
 
         loss = F.mse_loss(reconstructed_comp0, comp0) + F.mse_loss(reconstructed_comp1, comp1)
         if self.training:
