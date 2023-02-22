@@ -1,10 +1,10 @@
 import sys
 import os
 
-epochs = [100, 250]
+epochs = [100, 200]
 lrs = [1e-3, 1e-4]
 emb_size = {"lstm_ae": [4, 6],
-            "lstm_sae": [16, 32, 64],
+            "lstm_sae": [32, 64],
             "multi_enc_sae": [16, 32, 64],
             "multi_enc_ae": [4, 6],
             "diff_comp_sae": [16, 32, 64],
@@ -24,7 +24,7 @@ sep_string = {"lstm_ae": "",
               "diff_comp_sae": "-separate_comp",
               "diff_comp_ae": "-separate_comp"}
 
-lstm_layers = [2, 3, 4, 5]
+lstm_layers = [2, 5]
 
 model = sys.argv[1]
 
