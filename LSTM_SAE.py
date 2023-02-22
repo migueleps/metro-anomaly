@@ -30,12 +30,13 @@ class Decoder(nn.Module):
                  embedding_dim,
                  output_dim,
                  dropout,
-                 lstm_layers):
+                 lstm_layers,
+                 device=th.device("cuda")):
         super(Decoder, self).__init__()
 
         self.dropout = nn.Dropout(dropout)
         self.embedding_dim = embedding_dim
-
+        self.device = device
         self.lstm_layers = nn.ModuleList([nn.LSTMCell(input_size=output_dim,
                                                       hidden_size=embedding_dim)] +
                                          [nn.LSTMCell(input_size=embedding_dim,
@@ -46,7 +47,7 @@ class Decoder(nn.Module):
 
     def init_hidden(self, latent_space):
         hidden_states = [latent_space for _ in range(len(self.lstm_layers))]
-        cell_states = [th.zeros(1, self.embedding_dim) for _ in range(len(self.lstm_layers))]
+        cell_states = [th.zeros(1, self.embedding_dim, device=self.device) for _ in range(len(self.lstm_layers))]
         return hidden_states, cell_states
 
     def forward(self, latent_space, number_outputs):
