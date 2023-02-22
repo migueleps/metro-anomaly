@@ -33,18 +33,40 @@ class Decoder(nn.Module):
                  lstm_layers):
         super(Decoder, self).__init__()
 
-        self.lstm_layers = nn.LSTM(input_size=embedding_dim,
-                                   hidden_size=embedding_dim,
-                                   batch_first=True,
-                                   num_layers=lstm_layers,
-                                   dropout=dropout)
+        self.dropout = nn.Dropout(dropout)
+        self.embedding_dim = embedding_dim
+
+        self.lstm_layers = nn.ModuleList([nn.LSTMCell(input_size=output_dim,
+                                                      hidden_size=embedding_dim)] +
+                                         [nn.LSTMCell(input_size=embedding_dim,
+                                                      hidden_size=embedding_dim) for _ in range(lstm_layers-1)])
 
         self.output_layer = nn.Linear(in_features=embedding_dim,
                                       out_features=output_dim)
 
-    def forward(self, x):
-        x, (_, _) = self.lstm_layers(x)
-        return self.output_layer(x)
+    def init_hidden(self, latent_space):
+        hidden_states = [latent_space for _ in range(len(self.lstm_layers))]
+        cell_states = [th.zeros(1, self.embedding_dim) for _ in range(len(self.lstm_layers))]
+        return hidden_states, cell_states
+
+    def forward(self, latent_space, number_outputs):
+
+        hidden_states, cell_states = self.init_hidden(latent_space)
+        iter_input = self.output_layer(latent_space)
+        output = [iter_input]
+
+        for _ in range(number_outputs-1):
+            for i, lstm_layer in enumerate(self.lstm_layers):
+                new_hidden, new_cell = lstm_layer(iter_input, (hidden_states[i], cell_states[i]))
+                hidden_states[i] = new_hidden
+                cell_states[i] = new_cell
+                iter_input = self.dropout(new_hidden)
+            new_output = self.output_layer(iter_input)
+            output.append(new_output)
+            iter_input = new_output
+
+        output = th.stack(output, dim=0)
+        return th.flip(output, [0]).permute(1, 0, 2)
 
 
 class LSTM_SAE(nn.Module):
@@ -83,7 +105,9 @@ class LSTM_SAE(nn.Module):
         target_activations = th.full(average_activation.shape, self.sparsity_parameter).to(self.device)
         kl_div_part1 = th.log(target_activations / average_activation)
         kl_div_part2 = th.log((1 - target_activations) / (1 - average_activation))
-        return th.sum(self.sparsity_parameter * kl_div_part1 + (1 - self.sparsity_parameter) * kl_div_part2)
+        batch_kl_div = th.sum(self.sparsity_parameter * kl_div_part1 + (1 - self.sparsity_parameter) * kl_div_part2,
+                              dim=1)
+        return th.mean(batch_kl_div)
 
     def forward(self, x):
         n_examples = x.shape[1]
@@ -91,9 +115,7 @@ class LSTM_SAE(nn.Module):
 
         latent_vector, hidden_outs = self.encode(x)
 
-        stacked_LV = th.repeat_interleave(latent_vector, n_examples,
-                                          dim=1).reshape(-1, n_examples, self.embedding_dim).to(self.device)
-        reconstructed_x = self.decode(stacked_LV)
+        reconstructed_x = self.decode(latent_vector, n_examples)
 
         loss = F.mse_loss(reconstructed_x, x)
         if self.training:

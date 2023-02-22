@@ -2,7 +2,7 @@ import sys
 import os
 
 epochs = [100, 250]
-lrs = [1e-3, 1e-4, 3e-3]
+lrs = [1e-3, 1e-4]
 emb_size = {"lstm_ae": [4, 6],
             "lstm_sae": [16, 32, 64],
             "multi_enc_sae": [16, 32, 64],
