@@ -20,6 +20,10 @@ def parse_arguments():
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=2)
     parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=200)
 
+    parser.add_argument("-tcn_hidden", dest="tcn_hidden", type=int, default=30)
+    parser.add_argument("-tcn_layers", dest="tcn_layers", type=int, default=8)
+    parser.add_argument("-tcn_kernel", dest="tcn_kernel", type=int, default=5)
+
     parser.add_argument("-sw", dest="sparsity_weight", type=float, default=1.,
                         help="Sparsity weight for Sparse AE")
     parser.add_argument("-sp", dest="sparsity_parameter", type=float, default=0.05,
@@ -38,7 +42,7 @@ def parse_arguments():
     parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
                                                               "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae",
                                                               "GAN", "SimpleDiscriminator", "LSTMDiscriminator",
-                                                              "ConvDiscriminator"],
+                                                              "ConvDiscriminator", "tcn_ae"],
                         required=True)
 
     parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")

@@ -10,6 +10,7 @@ from LSTM_SAE_multi_encoder import LSTM_SAE_MultiEncoder
 from LSTM_AE_multi_encoder import LSTM_AE_MultiEncoder
 from LSTM_AE_diff_comp import LSTM_AE_MultiComp
 from LSTM_SAE_diff_comp import LSTM_SAE_MultiComp
+from TCN_AE import TCN_AE
 import tqdm
 from ArgumentParser import parse_arguments
 
@@ -173,7 +174,10 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
+    if "tcn" in arguments.MODEL_NAME:
+        arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.tcn_layers}_{arguments.tcn_hidden}_{arguments.tcn_kernel}"
+    else:
+        arguments.model_string = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
 
     print(f"Starting execution of model: {arguments.model_string}")
 
@@ -190,15 +194,25 @@ def main(arguments):
 
     MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE, "lstm_all_layer_sae": LSTM_AllLayerSAE,
               "multi_enc_sae": LSTM_SAE_MultiEncoder, "multi_enc_ae": LSTM_AE_MultiEncoder,
-              "diff_comp_sae": LSTM_SAE_MultiComp, "diff_comp_ae": LSTM_AE_MultiComp}
+              "diff_comp_sae": LSTM_SAE_MultiComp, "diff_comp_ae": LSTM_AE_MultiComp,
+              "tcn_ae": TCN_AE}
 
-    model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
-                                         arguments.EMBEDDING,
-                                         arguments.DROPOUT,
-                                         arguments.LSTM_LAYERS,
-                                         arguments.device,
-                                         arguments.sparsity_weight,
-                                         arguments.sparsity_parameter).to(arguments.device)
+    if "tcn" in arguments.MODEL_NAME:
+        model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
+                                             arguments.EMBEDDING,
+                                             arguments.DROPOUT,
+                                             arguments.tcn_layers,
+                                             arguments.device,
+                                             arguments.tcn_hidden,
+                                             arguments.tcn_kernel).to(arguments.device)
+    else:
+        model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,
+                                             arguments.EMBEDDING,
+                                             arguments.DROPOUT,
+                                             arguments.LSTM_LAYERS,
+                                             arguments.device,
+                                             arguments.sparsity_weight,
+                                             arguments.sparsity_parameter).to(arguments.device)
 
     if os.path.exists(arguments.model_saving_string) and not arguments.force_training:
         model.load_state_dict(th.load(arguments.model_saving_string))
