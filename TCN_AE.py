@@ -71,7 +71,6 @@ class Encoder(nn.Module):
             x = layer(x)
 
         x = x.permute(0, 2, 1)
-        x = self.output_layer(x)
 
         return self.output_layer(x)
 
@@ -110,7 +109,6 @@ class Decoder(nn.Module):
             x = layer(x)
 
         x = x.permute(0, 2, 1)
-        x = self.output_layer(x)
 
         return self.output_layer(x)
 
