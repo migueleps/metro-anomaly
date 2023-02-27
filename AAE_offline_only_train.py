@@ -100,7 +100,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensors, ep
 
     losses = []
     with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
-        for train_tensor in tqdm_epoch:
+        for i, train_tensor in enumerate(tqdm_epoch):
             tqdm_epoch.set_description(f"Encoder/Decoder Epoch {epoch + 1}")
             optimizer_encoder.zero_grad()
             optimizer_decoder.zero_grad()
@@ -127,6 +127,9 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensors, ep
             optimizer_encoder.step()
             optimizer_decoder.step()
             losses.append(loss.item())
+
+            if i%300 == 0:
+                print(f"Reconstruction loss: {reconstruction_loss.item()}  discriminator loss: {discriminator_loss.item()}")
 
     return losses
 
