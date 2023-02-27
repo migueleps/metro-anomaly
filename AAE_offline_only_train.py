@@ -30,27 +30,34 @@ def frozen_params(module: nn.Module):
         p.requires_grad = False
 
 
-def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, args):
+def train_discriminator(optimizer_discriminator, train_tensors, multivariate_normal, epoch, args):
 
     frozen_params(args.encoder)
     frozen_params(args.decoder)
     free_params(args.discriminator)
 
-    real_latent_space = args.encoder(train_tensor)
+    losses = []
+    with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
+        for train_tensor in tqdm_epoch:
+            tqdm_epoch.set_description(f"Discriminator Epoch {epoch + 1}")
+            optimizer_discriminator.zero_grad()
 
-    stacked_LV = th.repeat_interleave(real_latent_space,
-                                      train_tensor.shape[1],
-                                      dim=1).reshape(-1,
-                                                     train_tensor.shape[1],
-                                                     real_latent_space.shape[-1]).to(args.device)
+            random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
 
-    discriminator_real = args.discriminator(stacked_LV)
-    discriminator_random = args.discriminator(random_latent_space)
+            real_latent_space = args.encoder(train_tensor)
 
-    loss_random_term = th.log(discriminator_random)
-    loss_real_term = th.log(1-discriminator_real)
+            discriminator_real = args.discriminator(real_latent_space)
+            discriminator_random = args.discriminator(random_latent_space)
 
-    loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
+            loss_random_term = th.log(discriminator_random)
+            loss_real_term = th.log(1-discriminator_real)
+
+            loss = args.WAE_regularization_term * -th.mean(loss_real_term + loss_random_term)
+            loss.backward()
+
+            nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
+            optimizer_discriminator.step()
+            losses.append(loss.item())
 
     #with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
     #    gradient_file.write(f"Discriminator pre-sigmoid real latent\n")
@@ -65,9 +72,6 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     #    gradient_file.write(f"{str(loss)}\n")
     #    gradient_file.write("\n")
 
-    loss.backward()
-
-    nn.utils.clip_grad_norm_(args.discriminator.parameters(), 1)
 
     #with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
     #    for n, param in args.discriminator.named_parameters():
@@ -75,7 +79,7 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     #        gradient_file.write(str(param.grad))
     #        gradient_file.write("\n")
 
-    optimizer.step()
+
 
     #with open(args.param_logger("WAE_discriminator", epoch), "a") as gradient_file:
     #    for n, param in args.discriminator.named_parameters():
@@ -85,38 +89,46 @@ def train_discriminator(optimizer, train_tensor, random_latent_space, epoch, arg
     #for n, param in args.discriminator.named_parameters():
     #    if th.isnan(param.data).any().item():
     #        exit(1)
-    return loss.item()
+    return losses
 
 
-def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensor, epoch, args):
+def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensors, epoch, args):
 
     free_params(args.encoder)
     free_params(args.decoder)
     frozen_params(args.discriminator)
 
-    real_latent_space = args.encoder(train_tensor)
-    stacked_LV = th.repeat_interleave(real_latent_space,
-                                      train_tensor.shape[1],
-                                      dim=1).reshape(-1,
-                                                     train_tensor.shape[1],
-                                                     real_latent_space.shape[-1]).to(args.device)
+    losses = []
+    with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
+        for train_tensor in tqdm_epoch:
+            tqdm_epoch.set_description(f"Encoder/Decoder Epoch {epoch + 1}")
+            optimizer_encoder.zero_grad()
+            optimizer_decoder.zero_grad()
 
-    reconstructed_input = args.decoder(stacked_LV)
-    discriminator_real_latent = args.discriminator(Variable(stacked_LV))
+            real_latent_space = args.encoder(train_tensor)
+            stacked_LV = th.repeat_interleave(real_latent_space,
+                                              train_tensor.shape[1],
+                                              dim=1).reshape(-1,
+                                                             train_tensor.shape[1],
+                                                             real_latent_space.shape[-1]).to(args.device)
 
-    reconstruction_loss = F.mse_loss(reconstructed_input, train_tensor, reduction="none").mean(dim=1)
-    discriminator_loss = args.WAE_regularization_term * (th.log(discriminator_real_latent))
+            reconstructed_input = args.decoder(stacked_LV)
+            discriminator_real_latent = args.discriminator(real_latent_space)
 
-    loss = th.mean(reconstruction_loss - discriminator_loss)
-    loss.backward()
+            reconstruction_loss = F.mse_loss(reconstructed_input, train_tensor)
+            discriminator_loss = args.WAE_regularization_term * (th.log(discriminator_real_latent))
 
-    nn.utils.clip_grad_norm_(args.encoder.parameters(), 1)
-    nn.utils.clip_grad_norm_(args.decoder.parameters(), 1)
+            loss = th.mean(reconstruction_loss - discriminator_loss)
+            loss.backward()
 
-    optimizer_encoder.step()
-    optimizer_decoder.step()
+            nn.utils.clip_grad_norm_(args.encoder.parameters(), 1)
+            nn.utils.clip_grad_norm_(args.decoder.parameters(), 1)
 
-    return reconstruction_loss.mean().item()
+            optimizer_encoder.step()
+            optimizer_decoder.step()
+            losses.append(loss.item())
+
+    return losses
 
 
 def train_model(train_tensors,
@@ -134,27 +146,9 @@ def train_model(train_tensors,
 
     for epoch in range(epochs):
 
-        discriminator_losses = []
-        encoder_decoder_losses = []
-        with tqdm.tqdm(train_tensors, unit="cycles") as tqdm_epoch:
-            for train_tensor in tqdm_epoch:
-                tqdm_epoch.set_description(f"Epoch {epoch + 1}")
-                optimizer_encoder.zero_grad()
-                optimizer_decoder.zero_grad()
-                optimizer_discriminator.zero_grad()
-
-                random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
-                discriminator_losses.append(train_discriminator(optimizer_discriminator,
-                                                                train_tensor,
-                                                                random_latent_space,
-                                                                epoch,
-                                                                args))
-
-                encoder_decoder_losses.append(train_reconstruction(optimizer_encoder,
-                                                                   optimizer_decoder,
-                                                                   train_tensor,
-                                                                   epoch,
-                                                                   args))
+        discriminator_losses = train_discriminator(optimizer_discriminator, train_tensors,
+                                                   multivariate_normal, epoch, args)
+        encoder_decoder_losses = train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensors, epoch, args)
 
         loss_over_time['discriminator'].append(np.mean(discriminator_losses))
         loss_over_time['encoder/decoder'].append(np.mean(encoder_decoder_losses))
@@ -185,7 +179,7 @@ def predict(args, test_tensors, tqdm_desc):
 
                 reconstruction = args.decoder(stacked_LV)
                 reconstruction_errors.append(F.mse_loss(reconstruction, test_tensor).item())
-                critic_score = th.mean(args.discriminator(stacked_LV))
+                critic_score = th.mean(args.discriminator(latent_vector))
                 critic_scores.append(critic_score.item())
 
     return reconstruction_errors, critic_scores
@@ -194,18 +188,9 @@ def predict(args, test_tensors, tqdm_desc):
 def offline_train(args):
     print(f"Starting offline training")
 
-    if args.separate_comp:
-        with open(f"{args.data_folder}train_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors_comp0 = pkl.load(tensor_pkl)
-        with open(f"{args.data_folder}train_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors_comp1 = pkl.load(tensor_pkl)
-        train_tensors = [[train_tensors_comp0[i].to(args.device),
-                          train_tensors_comp1[i].to(args.device)] for i in range(len(train_tensors_comp0))]
-
-    else:
-        with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors = pkl.load(tensor_pkl)
-            train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
+    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        train_tensors = pkl.load(tensor_pkl)
+        train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
 
     loss_over_time = train_model(train_tensors,
                                  epochs=args.EPOCHS,
@@ -223,18 +208,10 @@ def offline_train(args):
 
 
 def calculate_train_losses(args):
-    if args.separate_comp:
-        with open(f"{args.data_folder}train_tensors_comp0_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors_comp0 = pkl.load(tensor_pkl)
-        with open(f"{args.data_folder}train_tensors_comp1_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors_comp1 = pkl.load(tensor_pkl)
-        train_tensors = [[train_tensors_comp0[i].to(args.device),
-                          train_tensors_comp1[i].to(args.device)] for i in range(len(train_tensors_comp0))]
 
-    else:
-        with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            train_tensors = pkl.load(tensor_pkl)
-            train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
+    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        train_tensors = pkl.load(tensor_pkl)
+        train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
 
     reconstruction_error, critic_scores = predict(args, train_tensors, "Calculating training error distribution")
     args.train_reconstruction_errors = reconstruction_error
@@ -244,21 +221,11 @@ def calculate_train_losses(args):
 
 def calculate_test_losses(args):
     all_test_tensors = []
-    if args.separate_comp:
-        for loop in range(args.END_LOOP + 1):
-            t = []
-            with open(f"{args.data_folder}test_tensors_comp0_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-                test_tensors = pkl.load(tensor_pkl)
-                t.append(test_tensors)
-            with open(f"{args.data_folder}test_tensors_comp1_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-                test_tensors = pkl.load(tensor_pkl)
-                t.append(test_tensors)
-            all_test_tensors.extend([[t[0][i].to(args.device), t[1][i].to(args.device)] for i in range(len(t[0]))])
-    else:
-        for loop in range(args.END_LOOP + 1):
-            with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-                test_tensors = pkl.load(tensor_pkl)
-                all_test_tensors.extend(test_tensors)
+
+    for loop in range(args.END_LOOP + 1):
+        with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
+            test_tensors = pkl.load(tensor_pkl)
+            all_test_tensors.extend(test_tensors)
 
     reconstruction_errors, critic_scores = predict(args, all_test_tensors, "Testing on new data")
 

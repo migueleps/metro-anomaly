@@ -83,11 +83,10 @@ class LSTMDiscriminator(nn.Module):
         self.lstm = nn.LSTM(input_size=input_dim,
                             hidden_size=64,
                             dropout=dropout,
-                            bidirectional=True,
                             batch_first=True,
                             num_layers=5)
 
-        self.output_layer = nn.Linear(in_features=128,
+        self.output_layer = nn.Linear(in_features=64,
                                       out_features=1)
 
     def forward(self, x):
