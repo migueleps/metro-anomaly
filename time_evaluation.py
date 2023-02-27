@@ -183,11 +183,14 @@ if __name__ == "__main__":
     with open("data/all_cycles_dates.pkl", "rb") as cycle_dates:
         all_cycles_dates = pkl.load(cycle_dates)
 
+    all_cycles_dates_red = [cycle for i, cycle in enumerate(all_cycles_dates) if i != 467 and i != 585]
+
     alpha_range = np.append(np.arange(0.01, 0.1, 0.01), np.arange(0.1, 1, 0.1))
     argument_dict = argument_parser()
     time_granularity = {"hours": argument_dict.hours, "days": argument_dict.days, "minutes": argument_dict.minutes}
     all_intervals = generate_intervals(time_granularity)
     cycles_per_interval = map_cycles_to_intervals(all_intervals, all_cycles_dates)
+    cycles_per_interval_red = map_cycles_to_intervals(all_intervals, all_cycles_dates_red)
 
     with open(argument_dict.file, "rb") as loss_file:
         tl = pkl.load(loss_file)
@@ -195,12 +198,16 @@ if __name__ == "__main__":
         train_losses = tl["train"]
 
     complete_losses = np.append(train_losses, test_losses)
-    average_loss_per_interval = np.array([np.mean(complete_losses[interval]) for interval in cycles_per_interval])
+    if "diff_comp" in argument_dict.file:
+        average_loss_per_interval = np.array([np.mean(complete_losses[interval]) for interval in cycles_per_interval])
+    else:
+        average_loss_per_interval = np.array([np.mean(complete_losses[interval]) for interval in cycles_per_interval_red])
+
     train_time = pd.Interval(pd.to_datetime('03-01-2022 03:59:59', dayfirst=True),
                              pd.to_datetime('01-02-2022 03:59:59', dayfirst=True))
     train_intervals = np.where([interval.overlaps(train_time) for interval in all_intervals])[0]
     train_interval_losses = average_loss_per_interval[train_intervals]
-    test_interval_losses = average_loss_per_interval[train_intervals[-1]+1:]
+    test_interval_losses = average_loss_per_interval[train_intervals[-1]:]
     anomaly_threshold = extreme_anomaly(train_interval_losses)
     binary_output = np.array(np.array(test_interval_losses) > anomaly_threshold, dtype=int)
 
@@ -214,7 +221,7 @@ if __name__ == "__main__":
     for alpha in alpha_range:
         if argument_dict.print_flag:
             print(f"[Alpha: {alpha:.2f}]")
-        d = output_metrics(output_lpf_binary[alpha], ground_truth, all_intervals[train_intervals[-1]+1:],
+        d = output_metrics(output_lpf_binary[alpha], ground_truth, all_intervals[train_intervals[-1]:],
                            print_flag=argument_dict.print_flag, print_label=label)
         dicts[alpha] = d
 
