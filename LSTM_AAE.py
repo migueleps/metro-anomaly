@@ -54,9 +54,9 @@ class SimpleDiscriminator(nn.Module):
         self.dropout = nn.Dropout(dropout)
         self.activation_func = nn.LeakyReLU()
 
-        self.fc1 = nn.Linear(in_features=input_dim,
-                             out_features=128)
-        self.fc2 = nn.Linear(in_features=128,
+        #self.fc1 = nn.Linear(in_features=input_dim,
+        #                     out_features=128)
+        self.fc2 = nn.Linear(in_features=input_dim,
                              out_features=64)
         self.fc3 = nn.Linear(in_features=64,
                              out_features=32)
@@ -64,9 +64,9 @@ class SimpleDiscriminator(nn.Module):
                                       out_features=1)
 
     def forward(self, x):
-        x = self.fc1(x)
-        x = self.activation_func(x)
-        x = self.dropout(x)
+        #x = self.fc1(x)
+        #x = self.activation_func(x)
+        #x = self.dropout(x)
         x = self.fc2(x)
         x = self.activation_func(x)
         x = self.dropout(x)
@@ -84,7 +84,7 @@ class LSTMDiscriminator(nn.Module):
                             hidden_size=64,
                             dropout=dropout,
                             batch_first=True,
-                            num_layers=5)
+                            num_layers=2)
 
         self.output_layer = nn.Linear(in_features=64,
                                       out_features=1)
