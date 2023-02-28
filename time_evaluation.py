@@ -194,8 +194,12 @@ if __name__ == "__main__":
 
     with open(argument_dict.file, "rb") as loss_file:
         tl = pkl.load(loss_file)
-        test_losses = tl["test"]
-        train_losses = tl["train"]
+        if "WAE" in argument_dict.file:
+            test_losses = tl["test"]["reconstruction"]
+            train_losses = tl["train"]["reconstruction"]
+        else:
+            test_losses = tl["test"]
+            train_losses = tl["train"]
 
     complete_losses = np.append(train_losses, test_losses)
     if "diff_comp" in argument_dict.file:
