@@ -49,44 +49,41 @@ class Decoder(nn.Module):
 
 class SimpleDiscriminator(nn.Module):
 
-    def __init__(self, input_dim, dropout):
+    def __init__(self, input_dim, dropout, **kwargs):
         super(SimpleDiscriminator, self).__init__()
         self.dropout = nn.Dropout(dropout)
         self.activation_func = nn.LeakyReLU()
 
-        #self.fc1 = nn.Linear(in_features=input_dim,
-        #                     out_features=128)
-        self.fc2 = nn.Linear(in_features=input_dim,
-                             out_features=64)
-        self.fc3 = nn.Linear(in_features=64,
-                             out_features=32)
-        self.output_layer = nn.Linear(in_features=32,
+        n_layers = kwargs["n_layers"]
+        first_layer_hidden_dim = kwargs["disc_hidden"]
+
+        inputs = [input_dim] + [int(first_layer_hidden_dim/2**i) for i in range(n_layers-1)]
+        outputs = [int(first_layer_hidden_dim/2**i) for i in range(n_layers)]
+
+        self.fcs = nn.Sequential(*[nn.Sequential(nn.Linear(in_features=inputs[i],
+                                                           out_features=outputs[i]),
+                                                 self.activation_func,
+                                                 self.dropout) for i in range(n_layers)])
+
+        self.output_layer = nn.Linear(in_features=outputs[-1],
                                       out_features=1)
 
     def forward(self, x):
-        #x = self.fc1(x)
-        #x = self.activation_func(x)
-        #x = self.dropout(x)
-        x = self.fc2(x)
-        x = self.activation_func(x)
-        x = self.dropout(x)
-        x = self.fc3(x)
-        x = self.activation_func(x)
-        x = self.dropout(x)
+        x = self.fcs(x)
         return th.sigmoid(self.output_layer(x))
 
 
 class LSTMDiscriminator(nn.Module):
 
-    def __init__(self, input_dim, dropout):
+    def __init__(self, input_dim, dropout, **kwargs):
         super(LSTMDiscriminator, self).__init__()
         self.lstm = nn.LSTM(input_size=input_dim,
-                            hidden_size=64,
+                            hidden_size=kwargs["disc_hidden"],
                             dropout=dropout,
                             batch_first=True,
-                            num_layers=2)
+                            num_layers=kwargs["n_layers"])
 
-        self.output_layer = nn.Linear(in_features=64,
+        self.output_layer = nn.Linear(in_features=kwargs["disc_hidden"],
                                       out_features=1)
 
     def forward(self, x):
@@ -137,15 +134,15 @@ class TemporalBlock(nn.Module):
 
 class ConvDiscriminator(nn.Module):
 
-    def __init__(self, input_dim, dropout):
+    def __init__(self, input_dim, dropout, **kwargs):
         super(ConvDiscriminator, self).__init__()
         # use same default parameters as TCN repo
 
-        hidden_dim = 30
-        num_layers = 8
+        hidden_dim = kwargs["disc_hidden"]
+        num_layers = kwargs["n_layers"]
         channels = num_layers * [hidden_dim]
         TCN_layers = []
-        kernel_size = 5
+        kernel_size = kwargs["kernel_size"]
 
         for i in range(num_layers):
             dilation = 2 ** i
