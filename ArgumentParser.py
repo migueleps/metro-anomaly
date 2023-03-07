@@ -18,7 +18,8 @@ def parse_arguments():
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
     parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, action="append")
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=2)
-    parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=200)
+    parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=32)
+    parser.add_argument("-disc_hidden", type=int, default=64)
 
     parser.add_argument("-tcn_hidden", dest="tcn_hidden", type=int, default=30)
     parser.add_argument("-tcn_layers", dest="tcn_layers", type=int, default=8)
@@ -52,5 +53,9 @@ def parse_arguments():
     parser.add_argument("-init", dest="INIT_LOOP", type=int, default=0)
     parser.add_argument("-end", dest="END_LOOP", type=int, default=17)
     parser.add_argument("-force-training", dest="force_training", action="store_true")
+
+    parser.add_argument("-sensor", default="tp2")
+    parser.add_argument("-train_tensor", required=True)
+    parser.add_argument("-test_tensor", required=True)
     args = parser.parse_args()
     return args
