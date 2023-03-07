@@ -108,7 +108,7 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, epoch, args):
             losses.append(loss.item())
 
             if i % 30 == 0:
-                print(f"Reconstruction loss: {reconstruction_loss.item()}  discriminator loss: {discriminator_loss.item()}")
+                print(f"Reconstruction loss: {reconstruction_loss.mean().item()}  discriminator loss: {discriminator_loss.mean().item()}")
 
     return losses
 
