@@ -155,7 +155,8 @@ def predict(args, test_dataloader, tqdm_desc):
     with th.no_grad():
         args.encoder.eval()
         args.decoder.eval()
-        args.discriminator.eval()
+        if args.use_discriminator:
+            args.discriminator.eval()
         with tqdm.tqdm(test_dataloader, unit="cycles") as tqdm_epoch:
             for test_batch in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
