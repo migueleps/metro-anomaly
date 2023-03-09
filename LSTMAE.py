@@ -37,9 +37,10 @@ class Decoder(nn.Module):
                                    hidden_size=embedding_dim,
                                    batch_first=True,
                                    num_layers=lstm_layers,
+                                   bidirectional=True,
                                    dropout=dropout)
 
-        self.output_layer = nn.Linear(in_features=embedding_dim,
+        self.output_layer = nn.Linear(in_features=2*embedding_dim,
                                       out_features=output_dim)
 
     def forward(self, x):
