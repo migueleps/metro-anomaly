@@ -7,7 +7,6 @@ import torch.nn.functional as F
 from torch.distributions.multivariate_normal import MultivariateNormal
 import pickle as pkl
 import tqdm
-from torch.autograd import Variable
 from ArgumentParser import parse_arguments
 from LSTM_AAE import Encoder, Decoder, SimpleDiscriminator, LSTMDiscriminator, ConvDiscriminator
 
@@ -16,8 +15,6 @@ from LSTM_AAE import Encoder, Decoder, SimpleDiscriminator, LSTMDiscriminator, C
 # Based on the implementation: https://github.com/schelotto/Wasserstein-AutoEncoders
 #
 ####################
-
-#th.autograd.set_detect_anomaly(True)
 
 
 def free_params(module: nn.Module):
@@ -59,36 +56,6 @@ def train_discriminator(optimizer_discriminator, train_tensors, multivariate_nor
             optimizer_discriminator.step()
             losses.append(loss.item())
 
-    #with open(args.loss_logger("WAE_discriminator", epoch), "a") as gradient_file:
-    #    gradient_file.write(f"Discriminator pre-sigmoid real latent\n")
-    #    gradient_file.write(f"{str(presig_real)}\n")
-    #    gradient_file.write(f"Discriminator pre-sigmoid random latent\n")
-    #    gradient_file.write(f"{str(presig_random)}\n")
-    #    gradient_file.write(f"Discriminator loss real\n")
-    #    gradient_file.write(f"{str(loss_real_term)}\n")
-    #    gradient_file.write(f"Discriminator loss random\n")
-    #    gradient_file.write(f"{str(loss_random_term)}\n")
-    #    gradient_file.write(f"Discriminator total loss\n")
-    #    gradient_file.write(f"{str(loss)}\n")
-    #    gradient_file.write("\n")
-
-
-    #with open(args.gradient_logger("WAE_discriminator", epoch), "a") as gradient_file:
-    #    for n, param in args.discriminator.named_parameters():
-    #        gradient_file.write(f"{n}\n")
-    #        gradient_file.write(str(param.grad))
-    #        gradient_file.write("\n")
-
-
-
-    #with open(args.param_logger("WAE_discriminator", epoch), "a") as gradient_file:
-    #    for n, param in args.discriminator.named_parameters():
-    #        gradient_file.write(f"{n}\n")
-    #        gradient_file.write(str(param.data))
-    #        gradient_file.write("\n")
-    #for n, param in args.discriminator.named_parameters():
-    #    if th.isnan(param.data).any().item():
-    #        exit(1)
     return losses
 
 
@@ -128,15 +95,11 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, train_tensors, ep
             optimizer_decoder.step()
             losses.append(loss.item())
 
-            if i%300 == 0:
-                print(f"Reconstruction loss: {reconstruction_loss.item()}  discriminator loss: {discriminator_loss.item()}")
-
     return losses
 
 
 def train_model(train_tensors,
                 epochs,
-                lr,
                 args):
 
     optimizer_discriminator = optim.Adam(args.discriminator.parameters(), lr=args.disc_lr)
@@ -191,13 +154,12 @@ def predict(args, test_tensors, tqdm_desc):
 def offline_train(args):
     print(f"Starting offline training")
 
-    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+    with open(f"{args.data_folder}final_train_tensors_{args.FEATS}.pkl", "rb") as tensor_pkl:
         train_tensors = pkl.load(tensor_pkl)
-        train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
+        train_tensors = [tensor.to(args.device) for tensor in train_tensors]
 
     loss_over_time = train_model(train_tensors,
                                  epochs=args.EPOCHS,
-                                 lr=args.LR,
                                  args=args)
 
     with open(args.results_string("offline"), "wb") as loss_file:
@@ -212,9 +174,9 @@ def offline_train(args):
 
 def calculate_train_losses(args):
 
-    with open(f"{args.data_folder}train_tensors_offline_{args.FEATS}.pkl", "rb") as tensor_pkl:
+    with open(f"{args.data_folder}final_train_tensors_{args.FEATS}.pkl", "rb") as tensor_pkl:
         train_tensors = pkl.load(tensor_pkl)
-        train_tensors = [tensor.to(args.device) for i, tensor in enumerate(train_tensors) if i != 467 and i != 585]
+        train_tensors = [tensor.to(args.device) for tensor in train_tensors]
 
     reconstruction_error, critic_scores = predict(args, train_tensors, "Calculating training error distribution")
     args.train_reconstruction_errors = reconstruction_error
@@ -223,14 +185,12 @@ def calculate_train_losses(args):
 
 
 def calculate_test_losses(args):
-    all_test_tensors = []
 
-    for loop in range(args.END_LOOP + 1):
-        with open(f"{args.data_folder}test_tensors_{loop}_{args.FEATS}.pkl", "rb") as tensor_pkl:
-            test_tensors = pkl.load(tensor_pkl)
-            all_test_tensors.extend(test_tensors)
+    with open(f"{args.data_folder}final_test_tensors_{args.FEATS}.pkl", "rb") as tensor_pkl:
+        test_tensors = pkl.load(tensor_pkl)
+        test_tensors = [tensor.to(args.device) for tensor in test_tensors]
 
-    reconstruction_errors, critic_scores = predict(args, all_test_tensors, "Testing on new data")
+    reconstruction_errors, critic_scores = predict(args, test_tensors, "Testing on new data")
 
     results = {"test": {"reconstruction": reconstruction_errors,
                         "critic": critic_scores},
@@ -254,15 +214,12 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    arguments.model_string = lambda model: f"{model}_{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
+    arguments.model_string = lambda model: f"{model}_{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}_{arguments.WAE_regularization_term}"
 
     print(f"Starting execution of model: {arguments.model_string('WAE')}")
 
-    arguments.results_string = lambda loop_no: f"{arguments.results_folder}{loop_no}_losses_{arguments.model_string('WAE')}_{arguments.EPOCHS}_{arguments.LR}.pkl"
-    arguments.model_saving_string = lambda model: f"{arguments.results_folder}offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}.pt"
-
-    with open(f"{arguments.data_folder}online_train_val_test_inds.pkl", "rb") as indices_pkl:
-        arguments.train_indices, arguments.val_indices, arguments.test_indices = pkl.load(indices_pkl)
+    arguments.results_string = lambda loop_no: f"{arguments.results_folder}final_{loop_no}_losses_{arguments.model_string('WAE')}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}.pkl"
+    arguments.model_saving_string = lambda model: f"{arguments.results_folder}final_offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}.pt"
 
     arguments.decoder = Decoder(arguments.EMBEDDING,
                                 arguments.NUMBER_FEATURES,
@@ -280,19 +237,6 @@ def load_parameters(arguments):
 
     arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
                                                            arguments.DROPOUT).to(arguments.device)
-
-    #for param in arguments.discriminator.parameters():
-    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
-
-    #for param in arguments.decoder.parameters():
-    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
-
-    #for param in arguments.encoder.parameters():
-    #    param.register_hook(lambda grad: grad.clamp(-1, 1))
-
-    arguments.gradient_logger = lambda model, epoch: f"gradients/grad_{arguments.model_string(model)}_{epoch}"
-    arguments.loss_logger = lambda model, epoch: f"gradients/loss_{arguments.model_string(model)}_{epoch}"
-    arguments.param_logger = lambda model, epoch: f"gradients/param_{arguments.model_string(model)}_{epoch}"
 
     return arguments
 
