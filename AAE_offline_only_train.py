@@ -236,7 +236,10 @@ def load_parameters(arguments):
                   ConvDiscriminator=ConvDiscriminator)
 
     arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
-                                                           arguments.DROPOUT).to(arguments.device)
+                                                           arguments.DROPOUT,
+                                                           n_layers=arguments.LSTM_LAYERS,
+                                                           disc_hidden=arguments.disc_hidden,
+                                                           kernel_size=arguments.tcn_kernel).to(arguments.device)
 
     return arguments
 
