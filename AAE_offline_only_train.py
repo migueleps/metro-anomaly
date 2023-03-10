@@ -39,9 +39,9 @@ def train_discriminator(optimizer_discriminator, train_tensors, multivariate_nor
             tqdm_epoch.set_description(f"Discriminator Epoch {epoch + 1}")
             optimizer_discriminator.zero_grad()
 
-            random_latent_space = multivariate_normal.sample(train_tensor.shape[:2]).to(args.device)
-
             real_latent_space = args.encoder(train_tensor)
+
+            random_latent_space = multivariate_normal.sample(real_latent_space.shape[:-1]).to(args.device)
 
             discriminator_real = args.discriminator(real_latent_space)
             discriminator_random = args.discriminator(random_latent_space)
