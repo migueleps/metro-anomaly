@@ -50,17 +50,27 @@ final_metro.reset_index(drop=True, inplace=True)
 analog_sensors = ['TP2', 'TP3', 'H1', 'DV_pressure', 'Reservoirs',
                   'Oil_temperature', 'Flowmeter', 'Motor_current']
 
+print("Read dataset")
+
 chunks, chunk_dates = generate_chunks(final_metro, 1800, 60, analog_sensors)
-training_chunks = chunks[np.where(chunk_dates[:, 1] < np.datetime64("2022-06-01T00:00:00.000000000"))[0]]
-test_chunks = chunks[np.where(chunk_dates[:, 0] >= np.datetime64("2022-06-01T00:00:00.000000000"))[0]]
+
+print("Calculated chunks")
+
 scaler = StandardScaler()
-scaled_training_chunks = np.array(list(map(lambda x: scaler.fit_transform(x), training_chunks)))
-scaled_test_chunks = np.array(list(map(lambda x: scaler.fit_transform(x), test_chunks)))
-training_tensor_chunks = th.tensor(scaled_training_chunks)
-test_tensor_chunks = th.tensor(scaled_test_chunks)
+scaled_chunks = np.array(list(map(lambda x: scaler.fit_transform(x), chunks)))
+
+print("Finished scaling")
+
+training_chunks = th.tensor(chunks[np.where(chunk_dates[:, 1] < np.datetime64("2022-06-01T00:00:00.000000000"))[0]])
+test_chunks = th.tensor(chunks[np.where(chunk_dates[:, 0] >= np.datetime64("2022-06-01T00:00:00.000000000"))[0]])
+
+print("Separated into training and test")
+
 
 with open("data/training_chunks.pkl", "wb") as pklfile:
-    pkl.dump(training_tensor_chunks, pklfile)
+    pkl.dump(training_chunks, pklfile)
 
 with open("data/test_chunks.pkl", "wb") as pklfile:
-    pkl.dump(test_tensor_chunks, pklfile)
+    pkl.dump(test_chunks, pklfile)
+
+print("Finished saving")
