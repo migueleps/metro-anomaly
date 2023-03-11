@@ -55,8 +55,8 @@ def parse_arguments():
     parser.add_argument("-force-training", dest="force_training", action="store_true")
 
     parser.add_argument("-sensor", default="tp2")
-    parser.add_argument("-train_tensor", required=True)
-    parser.add_argument("-test_tensor", required=True)
+    parser.add_argument("-train_tensor")
+    parser.add_argument("-test_tensor")
     parser.add_argument("-use_discriminator", action="store_true")
     args = parser.parse_args()
     return args
