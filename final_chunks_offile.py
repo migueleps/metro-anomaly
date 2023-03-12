@@ -24,7 +24,7 @@ class ChunkDataset(Dataset):
         return self.data.shape[0]
 
     def __getitem__(self, ind):
-        return self.data[ind, :, :]
+        return self.data[ind, :, :].float()
 
 
 ####################
