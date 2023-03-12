@@ -141,7 +141,7 @@ def train_model(epochs,
         optimizer_decoder = optim.Adam(args.decoder.parameters(), lr=args.LR)
 
     else:
-        optimizer_autoencoder = optim.Adam(args.model.parameters, lr=args.LR)
+        optimizer_autoencoder = optim.Adam(args.model.parameters(), lr=args.LR)
 
     loss_over_time = {"discriminator": [], "encoder/decoder": []}
 
