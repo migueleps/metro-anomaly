@@ -254,7 +254,7 @@ def calculate_test_losses(args):
         reconstruction_errors = predict_non_gan(args, args.test_dataloader, "Testing on new data")
 
         results = {"test": reconstruction_errors,
-                   "train": args.train_critic_scores}
+                   "train": args.train_reconstruction_errors}
 
     with open(results_string, "wb") as loss_file:
         pkl.dump(results, loss_file)
