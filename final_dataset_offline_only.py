@@ -13,6 +13,7 @@ from LSTM_SAE_diff_comp import LSTM_SAE_MultiComp
 from TCN_AE import TCN_AE
 import tqdm
 from ArgumentParser import parse_arguments
+from Alt_LSTM_AE import Alt_LSTM_AE
 
 
 def train_model(model,
@@ -139,7 +140,7 @@ def main(arguments):
     MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE, "lstm_all_layer_sae": LSTM_AllLayerSAE,
               "multi_enc_sae": LSTM_SAE_MultiEncoder, "multi_enc_ae": LSTM_AE_MultiEncoder,
               "diff_comp_sae": LSTM_SAE_MultiComp, "diff_comp_ae": LSTM_AE_MultiComp,
-              "tcn_ae": TCN_AE}
+              "tcn_ae": TCN_AE, "alt_lstm_ae": Alt_LSTM_AE}
 
     if "tcn" in arguments.MODEL_NAME:
         model = MODELS[arguments.MODEL_NAME](arguments.NUMBER_FEATURES,

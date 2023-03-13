@@ -43,7 +43,7 @@ def parse_arguments():
     parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
                                                               "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae",
                                                               "GAN", "SimpleDiscriminator", "LSTMDiscriminator",
-                                                              "ConvDiscriminator", "tcn_ae"],
+                                                              "ConvDiscriminator", "tcn_ae", "alt_lstm_ae"],
                         required=True)
 
     parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")
