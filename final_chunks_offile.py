@@ -60,7 +60,7 @@ def train_discriminator(optimizer_discriminator, multivariate_normal, epoch, arg
             train_batch = train_batch.to(args.device)
 
             real_latent_space = args.encoder(train_batch).unsqueeze(1)
-            random_latent_space = multivariate_normal.sample(real_latent_space[:2]).to(args.device)
+            random_latent_space = multivariate_normal.sample(real_latent_space.shape[:2]).to(args.device)
 
             discriminator_real = args.discriminator(real_latent_space)
             discriminator_random = args.discriminator(random_latent_space)
