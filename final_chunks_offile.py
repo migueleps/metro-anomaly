@@ -60,8 +60,8 @@ def train_discriminator(optimizer_discriminator, multivariate_normal, epoch, arg
             optimizer_discriminator.zero_grad()
             train_batch = train_batch.to(args.device)
 
-            real_latent_space = args.encoder(train_batch).unsqueeze(1)
-            
+            real_latent_space = args.encoder(train_batch)
+
             if len(real_latent_space.shape) == 2:
                 real_latent_space = real_latent_space.unsqueeze(1)
 
