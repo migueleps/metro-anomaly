@@ -61,6 +61,10 @@ def train_discriminator(optimizer_discriminator, multivariate_normal, epoch, arg
             train_batch = train_batch.to(args.device)
 
             real_latent_space = args.encoder(train_batch).unsqueeze(1)
+            
+            if len(real_latent_space.shape) == 2:
+                real_latent_space = real_latent_space.unsqueeze(1)
+
             random_latent_space = multivariate_normal.sample(real_latent_space.shape[:2]).to(args.device)
 
             discriminator_real = args.discriminator(real_latent_space)
@@ -92,7 +96,11 @@ def train_reconstruction(optimizer_encoder, optimizer_decoder, epoch, args):
             optimizer_encoder.zero_grad()
             optimizer_decoder.zero_grad()
             train_batch = train_batch.to(args.device)
-            real_latent_space = args.encoder(train_batch).unsqueeze(1)
+
+            real_latent_space = args.encoder(train_batch)
+            if len(real_latent_space.shape) == 2:
+                real_latent_space = real_latent_space.unsqueeze(1)
+
             stacked_LV = real_latent_space.repeat(1, train_batch.shape[1], 1).to(args.device)
 
             reconstructed_input = args.decoder(stacked_LV)
