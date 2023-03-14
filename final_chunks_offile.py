@@ -336,7 +336,7 @@ def load_parameters(arguments):
 
         arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
                                                                arguments.DROPOUT,
-                                                               n_layers=arguments.LSTM_LAYERS,
+                                                               n_layers=arguments.disc_layers,
                                                                disc_hidden=arguments.disc_hidden,
                                                                kernel_size=arguments.tcn_kernel,
                                                                window_size=1800).to(arguments.device)

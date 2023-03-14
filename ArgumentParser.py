@@ -20,6 +20,7 @@ def parse_arguments():
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=2)
     parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=32)
     parser.add_argument("-disc_hidden", type=int, default=64)
+    parser.add_argument("-disc_layers", type=int, default=2)
 
     parser.add_argument("-tcn_hidden", dest="tcn_hidden", type=int, default=30)
     parser.add_argument("-tcn_layers", dest="tcn_layers", type=int, default=8)
