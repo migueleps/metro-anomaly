@@ -13,6 +13,7 @@ from torch.utils.data import Dataset, DataLoader
 from LSTMAE import LSTM_AE
 from LSTM_SAE import LSTM_SAE
 from TCN_AE import TCN_AE
+from TCN_AAE import Encoder_TCN, Decoder_TCN, SimpleDiscriminator_TCN, LSTMDiscriminator_TCN, ConvDiscriminator_TCN
 
 
 class ChunkDataset(Dataset):
@@ -297,25 +298,40 @@ def load_parameters(arguments):
     arguments.model_saving_string = lambda model: f"{arguments.results_folder}final_chunks_offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.BATCH_SIZE}.pt"
 
     if arguments.use_discriminator:
-        arguments.decoder = Decoder(arguments.EMBEDDING,
-                                    arguments.NUMBER_FEATURES,
-                                    arguments.DROPOUT,
-                                    arguments.LSTM_LAYERS).to(arguments.device)
 
-        arguments.encoder = Encoder(arguments.NUMBER_FEATURES,
-                                    arguments.EMBEDDING,
-                                    arguments.DROPOUT,
-                                    arguments.LSTM_LAYERS).to(arguments.device)
+        encoders = dict(LSTM=Encoder,
+                        TCN=Encoder_TCN)
+
+        decoders = dict(LSTM=Decoder,
+                        TCN=Decoder_TCN)
+
+        arguments.decoder = decoders[arguments.DECODER_NAME](arguments.EMBEDDING,
+                                                             arguments.NUMBER_FEATURES,
+                                                             arguments.DROPOUT,
+                                                             arguments.LSTM_LAYERS,
+                                                             hidden_dim=arguments.tcn_hidden,
+                                                             kernel_size=arguments.tcn_kernel).to(arguments.device)
+
+        arguments.encoder = encoders[arguments.ENCODER_NAME](arguments.NUMBER_FEATURES,
+                                                             arguments.EMBEDDING,
+                                                             arguments.DROPOUT,
+                                                             arguments.LSTM_LAYERS,
+                                                             hidden_dim=arguments.tcn_hidden,
+                                                             kernel_size=arguments.tcn_kernel).to(arguments.device)
 
         models = dict(SimpleDiscriminator=SimpleDiscriminator,
                       LSTMDiscriminator=LSTMDiscriminator,
-                      ConvDiscriminator=ConvDiscriminator)
+                      ConvDiscriminator=ConvDiscriminator,
+                      SimpleDiscriminator_TCN=SimpleDiscriminator_TCN,
+                      LSTMDiscriminator_TCN=LSTMDiscriminator_TCN,
+                      ConvDiscriminator_TCN=ConvDiscriminator_TCN)
 
         arguments.discriminator = models[arguments.MODEL_NAME](arguments.EMBEDDING,
                                                                arguments.DROPOUT,
                                                                n_layers=arguments.LSTM_LAYERS,
                                                                disc_hidden=arguments.disc_hidden,
-                                                               kernel_size=arguments.tcn_kernel).to(arguments.device)
+                                                               kernel_size=arguments.tcn_kernel,
+                                                               window_size=1800).to(arguments.device)
 
     else:
         MODELS = {"lstm_ae": LSTM_AE, "lstm_sae": LSTM_SAE,  # "lstm_all_layer_sae": LSTM_AllLayerSAE,
