@@ -9,7 +9,7 @@ class Encoder(nn.Module):
                  input_dim,
                  embedding_dim,
                  dropout,
-                 lstm_layers):
+                 lstm_layers, **kwargs):
         super(Encoder, self).__init__()
 
         self.lstm_layers = nn.LSTM(input_size=input_dim,
@@ -29,7 +29,7 @@ class Decoder(nn.Module):
                  embedding_dim,
                  output_dim,
                  dropout,
-                 lstm_layers):
+                 lstm_layers, **kwargs):
         super(Decoder, self).__init__()
 
         self.lstm_layers = nn.LSTM(input_size=embedding_dim,

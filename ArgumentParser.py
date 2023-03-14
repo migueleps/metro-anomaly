@@ -16,7 +16,7 @@ def parse_arguments():
 
     parser.add_argument("-dropout", dest="DROPOUT", type=float, default=0.2)
     parser.add_argument("-embedding", dest="EMBEDDING", type=int, default=4)
-    parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, action="append")
+    parser.add_argument("-hidden", dest="HIDDEN_DIMS", type=int, default=30)
     parser.add_argument("-n_layers", dest="LSTM_LAYERS", type=int, default=2)
     parser.add_argument("-batch_size", dest="BATCH_SIZE", type=int, default=32)
     parser.add_argument("-disc_hidden", type=int, default=64)
@@ -43,8 +43,13 @@ def parse_arguments():
     parser.add_argument("-model", dest="MODEL_NAME", choices=["lstm_ae", "lstm_sae", "multi_enc_sae", "multi_enc_ae",
                                                               "lstm_all_layer_sae", "diff_comp_sae", "diff_comp_ae",
                                                               "GAN", "SimpleDiscriminator", "LSTMDiscriminator",
-                                                              "ConvDiscriminator", "tcn_ae", "alt_lstm_ae"],
+                                                              "ConvDiscriminator", "tcn_ae", "alt_lstm_ae",
+                                                              "SimpleDiscriminator_TCN", "LSTMDiscriminator_TCN",
+                                                              "ConvDiscriminator_TCN"],
                         required=True)
+
+    parser.add_argument("-encoder", dest="ENCODER_NAME", choices=["LSTM", "TCN"])
+    parser.add_argument("-decoder", dest="DECODER_NAME", choices=["LSTM", "TCN"])
 
     parser.add_argument("-recons_error", dest="reconstruction_error_metric", choices=["dtw", "mse"], default="mse")
     parser.add_argument("-dtw_local", dest="dtw_local_size", type=int, default=5)
