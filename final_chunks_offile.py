@@ -188,14 +188,20 @@ def predict_gan(args, test_dataloader, tqdm_desc):
             for test_batch in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
                 test_batch = test_batch.to(args.device)
-                latent_vector = args.encoder(test_batch).unsqueeze(1)
+                
+                latent_space = args.encoder(test_batch)
+                if len(latent_space.shape) == 2:
+                    latent_space = latent_space.unsqueeze(1)
 
-                stacked_LV = latent_vector.repeat(1, test_batch.shape[1], 1).to(args.device)
-
-                reconstruction = args.decoder(stacked_LV)
-                reconstruction_errors.append(F.mse_loss(reconstruction, test_batch).item())
-                critic_score = th.mean(args.discriminator(latent_vector))
+                critic_score = th.mean(args.discriminator(latent_space))
                 critic_scores.append(critic_score.item())
+
+                if "TCN" not in args.MODEL_NAME:
+                    latent_space = latent_space.repeat(1, test_batch.shape[1], 1).to(args.device)
+
+                reconstruction = args.decoder(latent_space)
+                reconstruction_errors.append(F.mse_loss(reconstruction, test_batch).item())
+
 
     return reconstruction_errors, critic_scores
 
