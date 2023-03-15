@@ -188,7 +188,7 @@ def predict_gan(args, test_dataloader, tqdm_desc):
             for test_batch in tqdm_epoch:
                 tqdm_epoch.set_description(tqdm_desc)
                 test_batch = test_batch.to(args.device)
-                
+
                 latent_space = args.encoder(test_batch)
                 if len(latent_space.shape) == 2:
                     latent_space = latent_space.unsqueeze(1)
@@ -201,7 +201,6 @@ def predict_gan(args, test_dataloader, tqdm_desc):
 
                 reconstruction = args.decoder(latent_space)
                 reconstruction_errors.append(F.mse_loss(reconstruction, test_batch).item())
-
 
     return reconstruction_errors, critic_scores
 
@@ -299,7 +298,14 @@ def load_parameters(arguments):
     arguments.test_dataloader = DataLoader(test_set, batch_size=1, shuffle=False)
 
     if arguments.use_discriminator:
-        arguments.model_string = lambda model: f"{model}_{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}_{arguments.WAE_regularization_term}"
+        first_part = f"{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.LSTM_LAYERS}"
+        last_part = f"{arguments.WAE_regularization_term}_{arguments.disc_layers}_{arguments.disc_hidden}"
+        if arguments.DECODER_NAME == "TCN":
+            model_specific_part = f"_{arguments.tcn_hidden}_{arguments.tcn_kernel}"
+        else:
+            model_specific_part = ""
+        arguments.model_string = lambda model: f"{model}_{first_part}{model_specific_part}_{last_part}"
+
     elif "tcn" in arguments.MODEL_NAME:
         arguments.model_string = lambda model: f"{model}_{arguments.MODEL_NAME}_{arguments.FEATS}_{arguments.EMBEDDING}_{arguments.tcn_layers}_{arguments.tcn_hidden}_{arguments.tcn_kernel}"
     else:
