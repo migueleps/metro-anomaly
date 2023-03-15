@@ -34,9 +34,7 @@ TCN_enc_discriminators = ["results/final_chunks_offline_WAE_discriminator_LSTMDi
                           "results/final_chunks_offline_WAE_discriminator_LSTMDiscriminator_TCN_analog_feats_6_10_5.0_200_1e-05_64.pt",
                           "results/final_chunks_offline_WAE_discriminator_LSTMDiscriminator_TCN_analog_feats_6_10_10.0_200_1e-05_64.pt",
                           "results/final_chunks_offline_WAE_discriminator_LSTMDiscriminator_TCN_analog_feats_6_10_0.5_200_1e-05_64.pt",
-                          "results/final_chunks_offline_WAE_discriminator_ConvDiscriminator_TCN_analog_feats_6_7_10.0_200_1e-05_64.pt",
-                          "results/final_chunks_offline_WAE_discriminator_ConvDiscriminator_TCN_analog_feats_6_10_5.0_200_1e-05_64.pt",
-                          "results/final_chunks_offline_WAE_discriminator_ConvDiscriminator_TCN_analog_feats_6_10_10.0_200_1e-05_64.pt"]
+                          "results/final_chunks_offline_WAE_discriminator_ConvDiscriminator_TCN_analog_feats_6_7_10.0_200_1e-05_64.pt"]
 
 disc_models = [LSTMDiscriminator_TCN(6, 0.2, disc_hidden=32, n_layers=4),
                LSTMDiscriminator_TCN(6, 0.2, disc_hidden=32, n_layers=2),
