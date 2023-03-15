@@ -9,15 +9,15 @@ emb_size = 4
 disc_params_string = lambda n_layers, hidden_units: f"-disc_hidden {hidden_units} -disc_layers {n_layers}"
 enc_dec_params = lambda n_layers, kernel_size, hidden_units: f"-n_layers {n_layers} -tcn_kernel {kernel_size} -tcn_hidden {hidden_units}"
 
-encdec_layers = [(7, 9), (8, 5), (10, 3)]
-encdec_hidden_units = [6, 30, 60]
+encdec_layers = [(7, 9), (10, 3)]
+encdec_hidden_units = [6, 30]
 
 disc_layers = [1, 2, 3]
-disc_hidden = [6, 32, 64]
+disc_hidden = [6, 32]
 
 model = "LSTMDiscriminator_TCN"
 
-base_string = lambda discriminator_lr, disc_params, enc_dec_params: f"python final_chunks_offline.py \
+base_string = lambda discriminator_lr, disc_params, enc_dec_params: f"python final_chunks_offile.py \
 -encoder TCN -decoder TCN -model {model} -embedding {emb_size} -epochs {epochs} -lr {lr} -batch_size 64 \
 -disc_lr {discriminator_lr} {disc_params} {enc_dec_params} -use_discriminator -WAEreg 10 -force-training"
 
