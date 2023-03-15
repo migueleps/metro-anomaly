@@ -14,7 +14,7 @@ multivariate_normal = MultivariateNormal(th.zeros(6), th.eye(6))
 
 discriminator_random_scores = {}
 
-for i, discriminator in disc_models:
+for i, discriminator in enumerate(disc_models):
     discriminator = discriminator.to(th.device("cuda"))
     discriminator.load_state_dict(th.load(LSTM_enc_discriminators[i], map_location=th.device("cuda")))
     discriminator.eval()
@@ -47,7 +47,7 @@ disc_models = [LSTMDiscriminator_TCN(6, 0.2, disc_hidden=32, n_layers=4),
                LSTMDiscriminator_TCN(6, 0.2, disc_hidden=32, n_layers=5, window_size=1800),
                ConvDiscriminator_TCN(6, 0.2, disc_hidden=30, n_layers=7, kernel_size= 7, window_size=1800)]
 
-for i, discriminator in disc_models:
+for i, discriminator in enumerate(disc_models):
     discriminator = discriminator.to(th.device("cuda"))
     discriminator.load_state_dict(th.load(TCN_enc_discriminators[i], map_location=th.device("cuda")))
     discriminator.eval()
