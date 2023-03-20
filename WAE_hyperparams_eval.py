@@ -216,6 +216,7 @@ for disc_layer in disc_layers:
                     for encdec_hidden in encdec_hidden_units:
                         model_s = model_loading_string(lr, dl, tcn_layers, encdec_hidden, tcn_kernel, disc_layer, discriminator_hidden)
                         results_s = results_string(lr, dl, tcn_layers, encdec_hidden, tcn_kernel, disc_layer, discriminator_hidden)
+                        print(results_s)
                         discriminator.load_state_dict(th.load(model_s, map_location=th.device("cuda")))
                         discriminator.eval()
                         with th.no_grad():
