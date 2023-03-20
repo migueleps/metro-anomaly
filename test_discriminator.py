@@ -59,7 +59,7 @@ discriminator.load_state_dict(th.load(model_file, map_location=th.device("cuda")
 discriminator.eval()
 with th.no_grad():
     disc_scores = []
-    for _ in range(100000):
+    for _ in range(10000):
         disc_scores.append(discriminator(multivariate_normal.sample(th.Size([1, 1800])).to(th.device("cuda"))).item())
 print(np.min(disc_scores), np.median(disc_scores), np.max(disc_scores))
 
