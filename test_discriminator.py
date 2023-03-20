@@ -12,7 +12,7 @@ import sys
 #disc_models = [LSTMDiscriminator(6, 0.2, disc_hidden=6, n_layers=4),
 #               LSTMDiscriminator(6, 0.2, disc_hidden=64, n_layers=4)]
 
-multivariate_normal = MultivariateNormal(th.zeros(6), th.eye(6))
+multivariate_normal = MultivariateNormal(th.zeros(4), th.eye(4))
 
 #discriminator_random_scores = {}
 
