@@ -216,8 +216,8 @@ def load_parameters(arguments):
 
     print(f"Starting execution of model: {arguments.model_string('WAE')}")
 
-    arguments.results_string = lambda loop_no, model_label: f"{arguments.results_folder}final_chunks_{loop_no}_losses_{arguments.model_string(model_label)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}_{arguments.BATCH_SIZE}.pkl"
-    arguments.model_saving_string = lambda model: f"{arguments.results_folder}final_chunks_offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}_{arguments.BATCH_SIZE}.pt"
+    arguments.results_string = lambda loop_no, model_label: f"{arguments.results_folder}final_chunks_{loop_no}_losses_{arguments.model_string(model_label)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}.pkl"
+    arguments.model_saving_string = lambda model: f"{arguments.results_folder}final_chunks_offline_{arguments.model_string(model)}_{arguments.EPOCHS}_{arguments.LR}_{arguments.disc_lr}.pt"
 
     arguments.decoder = Decoder_TCN(arguments.EMBEDDING,
                                     arguments.NUMBER_FEATURES,
