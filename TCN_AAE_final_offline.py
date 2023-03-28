@@ -153,7 +153,7 @@ def offline_train(args):
                                  epochs=args.EPOCHS,
                                  args=args)
 
-    with open(args.results_string("offline"), "wb") as loss_file:
+    with open(args.results_string("offline", "WAE"), "wb") as loss_file:
         pkl.dump(loss_over_time, loss_file)
 
     th.save(args.decoder.state_dict(), args.model_saving_string("WAE_decoder"))
@@ -189,7 +189,7 @@ def calculate_test_losses(args):
                "train": {"reconstruction": args.train_reconstruction_errors,
                          "critic": args.train_critic_scores}}
 
-    with open(args.results_string("complete"), "wb") as loss_file:
+    with open(args.results_string("complete", "WAE"), "wb") as loss_file:
         pkl.dump(results, loss_file)
 
     return
