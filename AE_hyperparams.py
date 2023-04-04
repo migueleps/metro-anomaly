@@ -9,7 +9,7 @@ tcn_params = lambda n_layers, kernel_size, hidden_units: f"-n_layers {n_layers} 
 
 tcn_layers = [(7, 9, 6), (7, 9, 30), (10, 3, 6), (10, 3, 30)]
 
-lstm_layers = range(5)
+lstm_layers = range(1, 6)
 
 embedding_sizes = [4, 6]
 model = sys.argv[1]
