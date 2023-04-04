@@ -34,7 +34,7 @@ def parse_arguments():
     parser.add_argument("-att_heads", dest="NHEADS", type=int, default=8,
                         help="Number of attention heads")
 
-    parser.add_argument("-feats", dest="FEATS", choices=["analog", "digital", "all"], default="analog",
+    parser.add_argument("-feats", dest="FEATS", choices=["analog", "digital", "all", "noflow"], default="analog",
                         help="Which sensors to use")
 
     parser.add_argument("-SI", dest="successive_iters", type=int, default=10)

@@ -2,7 +2,7 @@ import sys
 import os
 
 epochs = 150
-lr = float(sys.argv[1])
+lrs = [0.001, 0.0001]
 disc_lr = [1, 0.5, 0.1]
 emb_size = 4
 
@@ -17,16 +17,17 @@ disc_hidden = [6, 32]
 
 model = "LSTMDiscriminator_TCN"
 
-base_string = lambda discriminator_lr, disc_params, enc_dec_params: f"python final_chunks_offile.py \
--encoder TCN -decoder TCN -model {model} -embedding {emb_size} -epochs {epochs} -lr {lr} -batch_size 64 \
+base_string = lambda discriminator_lr, disc_params, enc_dec_params, lr: f"python final_chunks_offile.py \
+-feats noflow -encoder TCN -decoder TCN -model {model} -embedding {emb_size} -epochs {epochs} -lr {lr} -batch_size 64 \
 -disc_lr {discriminator_lr} {disc_params} {enc_dec_params} -use_discriminator -WAEreg 10 -force-training"
 
-for r in disc_lr:
-    dl = r * lr
-    for tcn_layers, tcn_kernel in encdec_layers:
-        for encdec_hidden in encdec_hidden_units:
-            enc_dec_param_string = enc_dec_params(tcn_layers, tcn_kernel, encdec_hidden)
-            for discriminator_layers in disc_layers:
-                for discriminator_hidden in disc_hidden:
-                    disc_param_string = disc_params_string(discriminator_layers, discriminator_hidden)
-                    os.system(base_string(dl, enc_dec_param_string, disc_param_string))
+for lr in lrs:
+    for r in disc_lr:
+        dl = r * lr
+        for tcn_layers, tcn_kernel in encdec_layers:
+            for encdec_hidden in encdec_hidden_units:
+                enc_dec_param_string = enc_dec_params(tcn_layers, tcn_kernel, encdec_hidden)
+                for discriminator_layers in disc_layers:
+                    for discriminator_hidden in disc_hidden:
+                        disc_param_string = disc_params_string(discriminator_layers, discriminator_hidden)
+                        os.system(base_string(dl, enc_dec_param_string, disc_param_string, lr))

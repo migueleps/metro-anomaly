@@ -280,7 +280,7 @@ def calculate_test_losses(args):
 
 def load_parameters(arguments):
 
-    FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16}
+    FEATS_TO_NUMBER = {"analog_feats": 8, "digital_feats": 8, "all_feats": 16, "noflow_feats": 7}
 
     arguments.device = th.device('cuda' if th.cuda.is_available() else 'cpu')
 
@@ -290,8 +290,12 @@ def load_parameters(arguments):
     arguments.results_folder = "results/"
     arguments.data_folder = "data/"
 
-    train_set = ChunkDataset("data/training_chunks.pkl")
-    test_set = ChunkDataset("data/test_chunks.pkl")
+    if arguments.FEATS == "noflow_feats":
+        train_set = ChunkDataset("data/training_chunks_noflow.pkl")
+        test_set = ChunkDataset("data/test_chunks_noflow.pkl")
+    else:
+        train_set = ChunkDataset("data/training_chunks.pkl")
+        test_set = ChunkDataset("data/test_chunks.pkl")
 
     arguments.train_dataloader = DataLoader(train_set, batch_size=arguments.BATCH_SIZE, shuffle=True)
     arguments.train_scores = DataLoader(train_set, batch_size=1, shuffle=False)
