@@ -20,7 +20,7 @@ base_string = lambda learning_rate, embedding_dim, enc_dec_params: f"python fina
 
 for lr in lrs:
     for emb_size in embedding_sizes:
-        to_iterate = lstm_layers if "LSTM" in model else tcn_layers
+        to_iterate = lstm_layers if "lstm" in model else tcn_layers
         for elem in to_iterate:
-            enc_dec_param_string = lstm_params(elem) if "LSTM" in model else tcn_params(elem[0], elem[1], elem[2])
+            enc_dec_param_string = lstm_params(elem) if "lstm" in model else tcn_params(elem[0], elem[1], elem[2])
             os.system(base_string(lr, emb_size, enc_dec_param_string))
